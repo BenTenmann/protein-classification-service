@@ -1,0 +1,6 @@
+*
+!.*ignore
+!instadeep_technical_test
+!*.py
+!*.R
+!*.ipynb
