@@ -1,6 +1,7 @@
-.idea
-wandb
-venv
+.idea/
+wandb/
+venv/
 *__pycache__*
-.ipynb_checkpoints
+.ipynb_checkpoints/
 *.swp
+*.ipynb
