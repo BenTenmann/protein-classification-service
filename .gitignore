@@ -1,6 +1,5 @@
-*
-!.*ignore
-!protein_classification
-!*.py
-!*.R
-!*.ipynb
+.idea
+wandb
+venv
+*__pycache__*
+.ipynb_checkpoints

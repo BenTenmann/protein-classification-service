@@ -1,0 +1,63 @@
+version: 2.1
+orbs:
+  codecov: codecov/codecov@3.2.2
+
+executors:
+  python-3-7:
+    docker:
+      - image: circleci/python:3.9
+  node-docker:
+    docker:
+      - image: circleci/node:14.18
+
+jobs:
+  generate-version:
+    executor: node-docker
+    steps:
+      - checkout
+      - run:
+          name: install semantic release dependencies
+          command: |
+            npm --prefix .semantic-release run installInParent
+      - run:
+          name: run semantic release
+          command: npx semantic-release
+
+  build-and-test:
+    executor: python-3-7
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - python-cache-{{ checksum "requirements.txt" }}
+      - run:
+          name: install dependencies
+          command: |
+            python -m pip install -r requirements.txt --user
+            python -m pip install -r requirements-dev.txt --user
+      - save_cache:
+          paths:
+            - ~/.cache/pip
+          key: python-cache-{{ checksum "requirements.txt" }}
+          when: always
+      - run:
+          name: run unit tests
+          command: |
+            python -m pytest -v tests --cov=${CIRCLE_PROJECT_REPONAME//-/_} --cov-report xml
+      - codecov/upload:
+          file: coverage.xml
+
+workflows:
+  version: 2
+  build-release:
+    jobs:
+      - generate-version:
+          filters:
+            branches:
+              only: "main"
+      - build-and-test:
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: "main"

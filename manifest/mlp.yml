@@ -1,0 +1,16 @@
+---
+model:
+  name: MLP
+  param:
+    d_model: 10
+    seq_len: 512
+    hidden_dim: 256
+    negative_slope: 0.3
+    num_labels: 1000
+    dropout: 0.01
+env:
+  batch_size: 128
+  epochs: 30
+optim:
+  lr: 1e-5
+  weight_decay: 0.01

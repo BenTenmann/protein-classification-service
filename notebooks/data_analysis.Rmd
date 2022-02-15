@@ -1,0 +1,140 @@
+---
+title: "Dataset Analysis"
+author: "Benjamin Tenmann"
+date: "12/02/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+ROOT <- Sys.getenv("NOTEBOOK_ROOT")
+knitr::opts_knit$set(root.dir = ROOT)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+In this notebook, I intend to get a birds-eye view of the dataset in question: `Pfam seed random split`.
+
+Protein family classification is the task of assigning a set of family domain IDs to a peptide. A protein domain is a section of the protein's sequence which performs a specific function. In this dataset, each example is an isolated domain with its associated family ID.
+
+A good example for a protein containing multiple domains is the superfamily of G-protein coupled receptors, which are a diverse set of cell-surface receptors involved in a variety of cell-signalling tasks. It consists of seven transmembrane domains, connected by three intracellular and three extracellular loops, of which the extracellular loops form the ligand-binding domain.
+
+```{r message=FALSE, warning=FALSE}
+library(rjson)
+library(tidyverse)
+```
+
+As a first step, let's load the data into memory (~ 1 million examples is manageable).
+
+```{r}
+DATA_DIR <- "data/random_split"
+FILES <- list.files(
+  path = DATA_DIR,
+  pattern = "*.jsonl",
+  full.names = TRUE
+)
+
+FILES %>%
+  map(function(x) {
+    readLines(x) %>%
+      map(fromJSON) %>%
+      bind_rows()
+  }) %>%
+  bind_rows() -> df
+```
+
+## Sanity Check
+
+To be sure that we have all the data, let's see how many examples we have for each split and how many examples in total.
+
+```{r}
+df %>%
+  group_by(split) %>%
+  count() -> tmp
+
+tmp %>%
+  ggplot(aes(x = split, y = n))+
+  geom_bar(stat = "identity", fill = "steelblue")+
+  labs(
+    title = "Number of examples by split",
+    y = "count"
+  )+
+  theme_bw()+
+  theme(text = element_text(family = "Times"))
+```
+
+The total number of examples is `r sum(tmp$n)` (~ 1.34m according to the paper). We also want to check that we have the right number of families.
+
+```{r}
+n_classes <- df$family_id %>% 
+  unique() %>%
+  length()
+```
+
+From this we get a total of `r n_classes` (17929 in the paper). Let's check the amino acid vocabulary:
+
+```{r}
+df$sequence %>%
+  str_split("") %>%
+  unlist() %>%
+  unique() -> vocab
+
+print(vocab)
+```
+
+From this we can see that we have a total vocabulary size of `r length(vocab)`. In the paper, the rare amino-acids are represented as pads.
+
+## Distribution Analysis
+
+Now that we have validated that everything is in its right place, we can look at some summary statistics and distributions of the data.
+First off, let's look at the distribution of (unaligned) sequence lengths.
+
+```{r}
+df %>%
+  mutate(sequence_length = str_length(sequence)) %>%
+  ggplot(aes(x = sequence_length))+
+  geom_histogram(bins = 50, fill = "steelblue")+
+  labs(
+    title = "Sequence length distribution per split",
+    x = "sequence length"
+  )+
+  theme_bw()+
+  theme(text = element_text(family = "Times"))+
+  facet_grid(split ~ ., scales = "free_y")
+```
+
+Next, we will look at the distribution of abundances for each family, i.e. the number of examples we have for each class.
+
+```{r}
+df %>%
+  group_by(split, family_id) %>%
+  count() -> tmp
+
+tmp %>%
+  ggplot(aes(x = n))+
+  geom_histogram(bins = 100, fill = "steelblue")+
+  labs(
+    title = "Distribution of number of examples per family, by split",
+    x = "Number of examples in a family"
+  )+
+  theme_bw()+
+  theme(text = element_text(family = "Times"))+
+  facet_grid(split ~ ., scales = "free_y")
+```
+
+Below we have a small summary table for the same data:
+
+```{r echo=FALSE, results='asis'}
+tmp %>%
+  group_by(split) %>%
+  summarise(
+    min = min(n),
+    q1 = quantile(n, 0.25),
+    median = median(n),
+    q3 = quantile(n, 0.75),
+    mean = mean(n),
+    sd = sd(n),
+    max = max(n)
+  ) %>%
+  knitr::kable()
+```
