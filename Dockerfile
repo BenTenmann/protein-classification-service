@@ -5,6 +5,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY protein_classification protein_classification
+COPY protein_classification_service .
 
 EXPOSE 5000
 EXPOSE 9000

@@ -3,3 +3,5 @@ scikit_learn==1.0.2
 srsly==2.4.2
 torch==1.10.2
 tqdm==4.62.3
+pydantic==1.9.0
+seldon-core==1.12.0
