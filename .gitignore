@@ -1,6 +1,6 @@
 *
 !.*ignore
-!instadeep_technical_test
+!protein_classification
 !*.py
 !*.R
 !*.ipynb
