@@ -7,6 +7,7 @@ import wandb
 from torch import nn
 
 from . import model as mdl
+from constants import DEVICE
 from .execution import (
     OptimizerStep,
     training,
@@ -27,6 +28,7 @@ def main():
     model_conf = config.get('model', {})
     model_param = model_conf.get('param', {})
     model = getattr(mdl, model_conf.get('name'))(**model_param)
+    model.to(DEVICE)
 
     label_map = srsly.read_json(environ.get('LABEL_MAP'))
     tokenizer = load_tokenizer(environ.get('TOKEN_MAP'))
