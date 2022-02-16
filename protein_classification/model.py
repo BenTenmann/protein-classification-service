@@ -84,19 +84,19 @@ class ProteinFamilyClassifier(nn.Module):
 class MLP(nn.Module):
     def __init__(self, d_model: int, seq_len: int, hidden_dim: int, num_labels: int, negative_slope: float, dropout: float):
         super(MLP, self).__init__()
-        self.proj_1 = nn.Linear(in_features=d_model * seq_len,
+        self.proj_1 = nn.Linear(in_features=d_model,
                                 out_features=hidden_dim)
         self.l_relu = nn.LeakyReLU(negative_slope)
-        self.proj_2 = nn.Linear(in_features=hidden_dim,
+        self.proj_2 = nn.Linear(in_features=hidden_dim * seq_len,
                                 out_features=num_labels)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         batch_size = x.size(0)
-        x = self.dropout(x.view(batch_size, -1))
+        x = self.dropout(x)
         proj = self.proj_1(x)
         act = self.l_relu(proj)
-        out = self.proj_2(act)
+        out = self.proj_2(act.view(batch_size, -1))
         return out
 
 
@@ -110,7 +110,7 @@ class MLPOneHot(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         batch_size = x.size(0)
-        embedding = self.embed(x)
+        embedding = self.dropout(self.embed(x))
         act = self.l_relu(embedding)
         out = self.proj(act.view(batch_size, -1))
         return out

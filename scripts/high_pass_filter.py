@@ -8,7 +8,7 @@ DATA_DIR = os.environ.get('DATA_DIR')
 OUTPUT = os.environ.get('OUTPUT')
 
 CLASS_COLUMN = os.environ.get('CLASS_COLUMN', 'family_accession')
-NUMBER_THRESHOLD = os.environ.get('NUMBER_THRESHOLD', 25)
+NUMBER_THRESHOLD = os.environ.get('NUMBER_THRESHOLD', 10)
 
 
 def read_dataframe(path: Path) -> pd.DataFrame:
