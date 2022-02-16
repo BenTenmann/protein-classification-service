@@ -7,7 +7,7 @@ import wandb
 from torch import nn
 
 from . import model as mdl
-from constants import DEVICE
+from .constants import DEVICE
 from .execution import (
     OptimizerStep,
     training,
