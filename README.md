@@ -11,7 +11,7 @@ A protein family is a group of proteins which share function and evolutionary or
 This service assumes `docker` to be installed. To run this service, you first have to build the image:
 
 ```bash
-IMAGE=$(basename ${PWD})
+IMAGE=$(dirname ${PWD})
 TAG=$(cat .tag)
 docker build -t ${IMAGE}:${TAG} .
 ```
@@ -19,5 +19,13 @@ docker build -t ${IMAGE}:${TAG} .
 Then run the image using:
 
 ```bash
-docker run -d -p 80:80 ${IMAGE}:${TAG}
+docker run --rm --name ${IMAGE} -p 0.0.0.0:7687:9000/tcp ${IMAGE}:${TAG}
+```
+ 
+This will start the Seldon microservice. You can now send post requests to the model to receive a classification, e.g.:
+
+```bash
+curl -X POST localhost:7687/api/v1.0/predictions \
+     -H 'Content-Type: application/json' \
+     -d '{"sequence": "EIKKMISEIDKDGSGTIDFEEFLTMMTA"}'
 ```

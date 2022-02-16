@@ -1,5 +1,7 @@
 import logging
 import os
+import traceback
+from functools import wraps
 
 import srsly
 import torch
@@ -23,6 +25,21 @@ LOGIT_MAP = os.environ.get('LOGIT_MAP')
 MODEL_WEIGHTS = os.environ.get('MODEL_WEIGHTS')
 TOKEN_MAP = os.environ.get('TOKEN_MAP')
 SEQUENCE_MAX_LEN = os.environ.get('SEQUENCE_MAX_LEN', 512)
+
+
+# ----- Error Handling ----------------------------------------------------------------------------------------------- #
+def catch_and_log_errors(fn):
+    @wraps(fn)
+    def _method(*args, **kwargs):
+        try:
+            out = fn(*args, **kwargs)
+            return out
+
+        except Exception as ex:
+            logging.error(ex)
+            logging.error(traceback.print_exc())
+            raise ex
+    return _method
 
 
 # ----- Typing ------------------------------------------------------------------------------------------------------- #
@@ -61,9 +78,11 @@ class ProteinClassificationService:
         predicted_class = str(predicted_class)
 
         out = self.logit_map[predicted_class]
-        out['score'] = float(prediction[0, predicted_class])
+        logits = torch.softmax(prediction, dim=-1)
+        out['score'] = float(logits[0, int(predicted_class)])
         return out
 
+    @catch_and_log_errors
     def predict_raw(self, msg: Payload) -> ProteinFamily:
         payload = dict(msg)
         tok = self._tokenize(payload['sequence'])
@@ -83,7 +102,9 @@ class ProteinClassificationService:
         model = getattr(mdl, conf.get('name', 'MLP'))
         param = conf.get('param', {})
         out = model(**param)
-        model.to(DEVICE)
+
+        out.load_state_dict(torch.load(MODEL_WEIGHTS))
+        out.to(DEVICE)
         return out
 
     def load(self):
