@@ -5,3 +5,5 @@ venv/
 .ipynb_checkpoints/
 *.swp
 *.ipynb
+*_files/
+*_cache/

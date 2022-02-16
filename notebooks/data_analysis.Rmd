@@ -1,7 +1,7 @@
 ---
-title: "Dataset Analysis"
+title: "Building a Protein Classifier"
 author: "Benjamin Tenmann"
-date: "12/02/2022"
+date: "18/02/2022"
 output: html_document
 ---
 
@@ -13,20 +13,23 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction
 
-In this notebook, I intend to get a birds-eye view of the dataset in question: `Pfam seed random split`.
+Protein family classification is the task of assigning a set of family domain IDs to a peptide. A protein domain is a section of the protein's sequence which performs a specific biological function. In this dataset, each example is an isolated domain with its associated family ID / accession number.
 
-Protein family classification is the task of assigning a set of family domain IDs to a peptide. A protein domain is a section of the protein's sequence which performs a specific function. In this dataset, each example is an isolated domain with its associated family ID.
+A good example for a protein containing multiple domains is the superfamily of G-protein coupled receptors (GPCR), which are a diverse set of cell-surface receptors involved in a variety of cell-signalling tasks. It consists of seven transmembrane domains, connected by three intracellular and three extracellular loops, of which the extracellular loops form the ligand-binding domain. The rhodopsin GPCR family, for example, are found in rod cells in the retina and are involved in light detection.
 
-A good example for a protein containing multiple domains is the superfamily of G-protein coupled receptors, which are a diverse set of cell-surface receptors involved in a variety of cell-signalling tasks. It consists of seven transmembrane domains, connected by three intracellular and three extracellular loops, of which the extracellular loops form the ligand-binding domain.
+## Dataset Analysis
 
 ```{r message=FALSE, warning=FALSE}
 library(rjson)
 library(tidyverse)
 ```
 
+
+The data we will use is the `Pfam seed random split`, which was published by Google Research in conjuction with their paper "Using Deep Learning to Annotate the Protein Universe". The data can be downloaded in its original form from [here](https://www.kaggle.com/googleai/pfam-seed-random-split), or alternatively in `.jsonl` format from [here](). It is a pre-split dataset containing aligned and unaliged protein domain sequences with their associated family IDs and accession numbers. Moreover, a sequence identifier is provided, which maps the domain sequence back to its protein of origin.
+
 As a first step, let's load the data into memory (~ 1 million examples is manageable).
 
-```{r}
+```{r cache=TRUE}
 DATA_DIR <- "data/random_split"
 FILES <- list.files(
   path = DATA_DIR,
@@ -43,7 +46,7 @@ FILES %>%
   bind_rows() -> df
 ```
 
-## Sanity Check
+### Sanity Check
 
 To be sure that we have all the data, let's see how many examples we have for each split and how many examples in total.
 
@@ -71,39 +74,88 @@ n_classes <- df$family_id %>%
   length()
 ```
 
-From this we get a total of `r n_classes` (17929 in the paper). Let's check the amino acid vocabulary:
+From this we get a total of `r n_classes` (17929 in the paper). It is important to note here, that family ID and family accession can be used interchangeably, as we are using a pinned version of the Pfam seed dataset. In this case, the version suffixes on the accession codes are redundant and we have a one-to-one mapping between ID and accession code. However, a different version of Pfam may disrupt this mapping (see later).
 
-```{r}
+The provided protein domains are represented as strings of alphabetical letters, where each letter is the single-letter representation for a given amino acid. Amino acids are a type of organic compound consisting of an amino and a carboxylate group, along with a side chain ($R$ group) branching off the $\alpha$ carbon. It is the $R$ group which differentiates the amino acids from one another, giving each a unique set of physicochemical properties. For example, cysteine (Cys/C) is defined by the thiol sidechain, which can unqiuely create disulphide bonds with another cysteine side chain distal from itself in sequence. This enables the creation of deep pocket folds and rigid maintenance therof.
+
+In nature, there are 20 frequently occurring amino acids. Let's check the amino acid vocabulary in the dataset:
+
+```{r cache=TRUE}
 df$sequence %>%
   str_split("") %>%
-  unlist() %>%
-  unique() -> vocab
+  unlist() -> all_letters
 
+vocab <- unique(all_letters)
 print(vocab)
 ```
 
-From this we can see that we have a total vocabulary size of `r length(vocab)`. In the paper, the rare amino-acids are represented as pads.
+The total vocabulary size of the dataset is `r length(vocab)`. As we can see, there are a number of rare amino acids present. 
 
-## Distribution Analysis
+```{r}
+tibble(
+  lm = all_letters
+) %>%
+  group_by(lm) %>%
+  count() %>%
+  ggplot(aes(x = reorder(lm, -n), y = n))+
+  geom_bar(stat = "identity", fill = "steelblue")+
+  labs(
+    title = "Amino acid letter counts",
+    x = "amino acid",
+    y = "count"
+  )+
+  theme_bw()+
+  theme(text = element_text(family = "Times"))
+```
 
-Now that we have validated that everything is in its right place, we can look at some summary statistics and distributions of the data.
-First off, let's look at the distribution of (unaligned) sequence lengths.
+In the paper, the rare amino-acids are represented as pads.
+
+### Distribution Analysis
+
+Now that we have validated that dataset is complete, we can look at some summary statistics and distributions of the data. 
+
+In [] the task was family classification from the unaligned amino acid sequences of the protein domains. To do the same, we have to find a salient mapping from the discrete, alphabetic, variable size space to a continuous, numeric and fixed size space. First off, let's look at the distribution of (unaligned) sequence lengths.
 
 ```{r}
 df %>%
-  mutate(sequence_length = str_length(sequence)) %>%
-  ggplot(aes(x = sequence_length))+
+  mutate(sequence_length = str_length(sequence)) -> tmp
+
+tmp %>%
+  ggplot(aes(x = log(sequence_length)))+
   geom_histogram(bins = 50, fill = "steelblue")+
   labs(
-    title = "Sequence length distribution per split",
-    x = "sequence length"
+    title = expression(log[e]~"sequence length distribution per split"),
+    x = expression(log[e]~"sequence length")
   )+
   theme_bw()+
   theme(text = element_text(family = "Times"))+
   facet_grid(split ~ ., scales = "free_y")
 ```
 
-Next, we will look at the distribution of abundances for each family, i.e. the number of examples we have for each class.
+The unaligned sequences have a log-normal distribution with the following summary statistics:
+
+```{r results='asis'}
+tmp %>%
+  group_by(split) %>%
+  summarise(
+    min = min(sequence_length),
+    q1 = quantile(sequence_length, 0.25),
+    median = median(sequence_length),
+    q3 = quantile(sequence_length, 0.75),
+    mean = mean(sequence_length),
+    sd = sd(sequence_length),
+    max = max(sequence_length)
+  ) %>%
+  knitr::kable()
+```
+
+The variability in sequence length can be addressed in two ways:
+
+1. Padding: we can pad the sequences with empty tokens as can be seen in the multiple sequence alignments. This does not have to happen via alignment, however; we can simply right, left or center pad. The complement to padding is truncation, where we simply remove tokens for sequences surpassing the length threshold. Whichever approach is taken, the result is a set of sequences with uniform length
+2. Pooling: alternatively, tokens can be pooled in some way to produce a single representation for the whole sequence. A classic pooling method is _Term-Frequency Inverse Document Frequency_ (TF-IDF), where the terms are the set of overlapping $k$-mers ($k \geq 1$; equivalent to $n$-grams) and the documents are the sequences. This transforms each sequence into a $|\mathcal{V}|^k$ dimensional vector, where $\mathcal{V}$ is the vocabulary (amino acid codes in our case). Another approach is pooling learned, distributed token representations along the sequence dimension. For example, a pre-trained protein language model, such as ProtBERT [], can be used to embed the tokens into a high dimensional space and then the tokens can be pooled (mean, max etc.) to yield a single dense vector representation for the sequence.
+
+Having investigated the model inputs, we turn our attention now to the model targets. Due to the one-to-one mapping between family ID and family acccession, I use family ID here arbitrarily. 
+Looking at the distribution of abundances for each family, i.e. the number of examples we have for each class, we observe a power-law distribution. This means that we have a low number of high support classes, and a high number of low support classes.
 
 ```{r}
 df %>%
@@ -138,3 +190,9 @@ tmp %>%
   ) %>%
   knitr::kable()
 ```
+
+This imbalance can be addressed in three ways:
+
+1. Resampling: over-represented classes can be undersampled, under-represented classes can be oversampled. There are a number of algorithms for either, including random sampling (with replacement for over-sampling) and SMOTE.
+2. Reweighting: loss terms can be re-weighted w.r.t their class' abundance in the training set. The three primary strategies are inverse sample number, inverse square root sample number and effective sample number. Under certain conditions, loss re-weighting can be effectively equivalent to resampling the dataset.
+3. Probelm reformulation: failing the latter two, the problem can be reformulated. For example, a multi-class classification problem can be restated as a link prediction task, where the target is binary: given example $x_i$ and $x_j$, state the probability that they belong to the same class $C_k$ (edge). Now $C_k$ has $\frac{N_k}{2}(N_k - 1)$ examples, where $N_k$ is the original number of examples.
