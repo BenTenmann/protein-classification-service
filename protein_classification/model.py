@@ -5,7 +5,8 @@ from torch import nn
 
 __all__ = [
     'ProteinFamilyClassifier',
-    'MLP'
+    'MLP',
+    'MLPOneHot'
 ]
 
 
@@ -28,6 +29,7 @@ class PositionalEncoding(nn.Module):
 
 class ProteinFamilyClassifier(nn.Module):
     def __init__(self,
+                 n_tokens: int,
                  d_model: int,
                  seq_len: int,
                  n_head: int,
@@ -38,6 +40,7 @@ class ProteinFamilyClassifier(nn.Module):
                  num_labels: int,
                  dropout: float):
         super(ProteinFamilyClassifier, self).__init__()
+        self.embed_layer = nn.Embedding(num_embeddings=n_tokens, embedding_dim=d_model)
         self.pos_enc = PositionalEncoding(d_model, dropout, max_len=seq_len)
         self.encoder = nn.TransformerEncoder(
             encoder_layer=nn.TransformerEncoderLayer(
@@ -61,6 +64,7 @@ class ProteinFamilyClassifier(nn.Module):
         return out
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.embed_layer(x)
         pos_enc = self.pos_enc(x)
         encoding = self.encoder(pos_enc)
         out = self.layer_norm(encoding + x)
@@ -93,4 +97,20 @@ class MLP(nn.Module):
         proj = self.proj_1(x)
         act = self.l_relu(proj)
         out = self.proj_2(act)
+        return out
+
+
+class MLPOneHot(nn.Module):
+    def __init__(self, n_tokens: int, embed_dim: int, seq_len: int, num_labels: int, negative_slope: float, dropout: float):
+        super(MLPOneHot, self).__init__()
+        self.embed = nn.Embedding(num_embeddings=n_tokens, embedding_dim=embed_dim)
+        self.l_relu = nn.LeakyReLU(negative_slope)
+        self.proj = nn.Linear(in_features=embed_dim * seq_len, out_features=num_labels)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        batch_size = x.size(0)
+        embedding = self.embed(x)
+        act = self.l_relu(embedding)
+        out = self.proj(act.view(batch_size, -1))
         return out

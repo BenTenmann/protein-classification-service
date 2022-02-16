@@ -4,7 +4,10 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-from .constants import DEVICE
+from .constants import DEVICE, TYPES
+
+SOURCE_TYPE = os.environ.get('SOURCE_TYPE', 'FLOAT')
+TARGET_TYPE = os.environ.get('TARGET_TYPE', 'LONG')
 
 
 class Tokenizer:
@@ -12,7 +15,7 @@ class Tokenizer:
         self.token_map = token_map
 
         elem, *_ = token_map.values()
-        self._pad_token = [0] * len(elem)
+        self._pad_token = 0 if type(elem) == int else [0] * len(elem)
 
     def __call__(self, sequence: str, padding: str, truncation: bool, max_length: int) -> list:
         sequence_len = len(sequence)
@@ -20,7 +23,7 @@ class Tokenizer:
         toks = []
         toks.extend([self.token_map.get(token, self._pad_token) for token in sequence])
         if padding == 'max_length':
-            toks.extend([self._pad_token for _ in range(max_length - sequence_len)])
+            toks.extend([self._pad_token] * (max_length - sequence_len))
 
         if truncation:
             toks = toks[:max_length]
@@ -38,6 +41,8 @@ class ProteinFamilyDataset(Dataset):
     """
     _source_column: str = os.environ.get('SOURCE_COLUMN', 'sequence')
     _target_column: str = os.environ.get('TARGET_COLUMN', 'family_accession')
+    _source_type: torch.dtype = TYPES.get(SOURCE_TYPE)
+    _target_type: torch.dtype = TYPES.get(TARGET_TYPE)
 
     def __init__(self, data_source: pd.DataFrame, tokenizer: Tokenizer, label_map: dict, **tokenizer_args):
         self.data_source = data_source
@@ -54,12 +59,12 @@ class ProteinFamilyDataset(Dataset):
 
     def _cast_sequence_to_tensor(self, sequence: str) -> torch.Tensor:
         toks = self._tokenize(sequence)
-        out = torch.tensor(toks, dtype=torch.float32, device=DEVICE)
+        out = torch.tensor(toks, dtype=self._source_type, device=DEVICE)
         return out
 
     def _cast_label_to_tensor(self, label: str) -> torch.Tensor:
         idx = self.label_map.get(label)
-        out = torch.tensor(idx, dtype=torch.long, device=DEVICE)
+        out = torch.tensor(idx, dtype=self._target_type, device=DEVICE)
         return out
 
     def __getitem__(self, item: int):

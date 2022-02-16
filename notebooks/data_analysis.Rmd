@@ -134,7 +134,7 @@ tmp %>%
 
 The unaligned sequences have a log-normal distribution with the following summary statistics:
 
-```{r results='asis'}
+```{r echo=FALSE, results='asis'}
 tmp %>%
   group_by(split) %>%
   summarise(
@@ -151,8 +151,8 @@ tmp %>%
 
 The variability in sequence length can be addressed in two ways:
 
-1. Padding: we can pad the sequences with empty tokens as can be seen in the multiple sequence alignments. This does not have to happen via alignment, however; we can simply right, left or center pad. The complement to padding is truncation, where we simply remove tokens for sequences surpassing the length threshold. Whichever approach is taken, the result is a set of sequences with uniform length
-2. Pooling: alternatively, tokens can be pooled in some way to produce a single representation for the whole sequence. A classic pooling method is _Term-Frequency Inverse Document Frequency_ (TF-IDF), where the terms are the set of overlapping $k$-mers ($k \geq 1$; equivalent to $n$-grams) and the documents are the sequences. This transforms each sequence into a $|\mathcal{V}|^k$ dimensional vector, where $\mathcal{V}$ is the vocabulary (amino acid codes in our case). Another approach is pooling learned, distributed token representations along the sequence dimension. For example, a pre-trained protein language model, such as ProtBERT [], can be used to embed the tokens into a high dimensional space and then the tokens can be pooled (mean, max etc.) to yield a single dense vector representation for the sequence.
+1. **Padding**: we can pad the sequences with empty tokens as can be seen in the multiple sequence alignments. This does not have to happen via alignment, however; we can simply right, left or center pad. The complement to padding is truncation, where we simply remove tokens for sequences surpassing the length threshold. Whichever approach is taken, the result is a set of sequences with uniform length
+2. **Pooling**: alternatively, tokens can be pooled in some way to produce a single representation for the whole sequence. A classic pooling method is _Term-Frequency Inverse Document Frequency_ (TF-IDF), where the terms are the set of overlapping $k$-mers ($k \geq 1$; equivalent to $n$-grams) and the documents are the sequences. This transforms each sequence into a $D \leq |\mathcal{V}|^k$ dimensional vector, where $\mathcal{V}$ is the vocabulary (amino acid codes in our case). Another approach is pooling learned, distributed token representations along the sequence dimension. For example, a pre-trained protein language model, such as ProtBERT [], can be used to embed the tokens into a high dimensional space and then the tokens can be pooled (mean, max etc.) to yield a single dense vector representation for the sequence.
 
 Having investigated the model inputs, we turn our attention now to the model targets. Due to the one-to-one mapping between family ID and family acccession, I use family ID here arbitrarily. 
 Looking at the distribution of abundances for each family, i.e. the number of examples we have for each class, we observe a power-law distribution. This means that we have a low number of high support classes, and a high number of low support classes.
@@ -193,6 +193,11 @@ tmp %>%
 
 This imbalance can be addressed in three ways:
 
-1. Resampling: over-represented classes can be undersampled, under-represented classes can be oversampled. There are a number of algorithms for either, including random sampling (with replacement for over-sampling) and SMOTE.
-2. Reweighting: loss terms can be re-weighted w.r.t their class' abundance in the training set. The three primary strategies are inverse sample number, inverse square root sample number and effective sample number. Under certain conditions, loss re-weighting can be effectively equivalent to resampling the dataset.
-3. Probelm reformulation: failing the latter two, the problem can be reformulated. For example, a multi-class classification problem can be restated as a link prediction task, where the target is binary: given example $x_i$ and $x_j$, state the probability that they belong to the same class $C_k$ (edge). Now $C_k$ has $\frac{N_k}{2}(N_k - 1)$ examples, where $N_k$ is the original number of examples.
+1. **Resampling**: over-represented classes can be undersampled, under-represented classes can be oversampled. There are a number of algorithms for either, including random sampling (with replacement for over-sampling) and SMOTE.
+2. **Reweighting**: loss terms can be re-weighted w.r.t their class' abundance in the training set. The three primary strategies are inverse sample number, inverse square root sample number and effective sample number. Under certain conditions, loss re-weighting can be effectively equivalent to resampling the dataset.
+3. **Probelm reformulation**: failing the latter two, the problem can be reformulated. For example, a multi-class classification problem can be restated as a link prediction task, where the target is binary: given example $x_i$ and $x_j$, state the probability that they belong to the same class $C_k$ (edge). Now $C_k$ has $\frac{N_k}{2}(N_k - 1)$ examples, where $N_k$ is the original number of examples.
+
+
+## Method Explanation
+
+

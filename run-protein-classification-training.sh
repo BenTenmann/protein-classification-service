@@ -9,18 +9,20 @@ fi
 
 PROJECT=protein-classification
 PYPATH="${PWD}"/venv/bin
-DATA_DIR="${PWD}"/data/random_split/clans
+DATA_DIR="${PWD}"/data/random_split/top-n
 
-export CONFIG_MAP="${PWD}"/manifest/model.yml
-export TRAIN_DATA="${DATA_DIR}"/train-resampled.jsonl
-export DEV_DATA="${DATA_DIR}"/dev.jsonl
-export TEST_DATA="${DATA_DIR}"/test.jsonl
+export CONFIG_MAP="${PWD}"/manifest/mlp-one-hot.yml
+export TRAIN_DATA="${DATA_DIR}"/train-top-1000-resampled.jsonl
+export DEV_DATA="${DATA_DIR}"/dev-top-1000.jsonl
+export TEST_DATA="${DATA_DIR}"/test-top-1000.jsonl
 export LABEL_MAP="${DATA_DIR}"/label-map.json
-export TOKEN_MAP="${PWD}"/data/kd-token-map.json
+export TOKEN_MAP="${PWD}"/data/oh-token-map.json
 export SAVE_PATH="${PWD}"/model-weights
 
 export SOURCE_COLUMN="sequence"
-export TARGET_COLUMN="clan_acc"
+export TARGET_COLUMN="family_accession"
+export SOURCE_TYPE="LONG"
+export TARGET_TYPE="LONG"
 
 export WANDB_ENTITY=bentenmann
 export WANDB_PROJECT="${PROJECT}-mlp"
