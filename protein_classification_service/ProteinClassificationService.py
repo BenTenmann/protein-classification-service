@@ -58,7 +58,7 @@ class ProteinClassificationService:
 
     def _prediction_to_output(self, prediction: torch.Tensor) -> dict:
         predicted_class = prediction.argmax(dim=-1).item()
-        predicted_class = int(predicted_class)
+        predicted_class = str(predicted_class)
 
         out = self.logit_map[predicted_class]
         out['score'] = float(prediction[0, predicted_class])
