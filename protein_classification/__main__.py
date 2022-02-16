@@ -47,7 +47,7 @@ def main():
     optimizer = OptimizerStep(optim)
 
     wandb.login(key=environ.get('WANDB_API_KEY'))
-    wandb.init(entity=environ.get('WANDB_API_KEY'), project=environ.get('WANDB_PROJECT'))
+    wandb.init(entity=environ.get('WANDB_ENTITY'), project=environ.get('WANDB_PROJECT'))
 
     epochs = env.get('epochs')
     for _ in range(epochs):
