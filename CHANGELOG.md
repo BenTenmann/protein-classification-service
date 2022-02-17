@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.0.0...deploy-1.0.1) (2022-02-17)
+
+
+### Bug Fixes
+
+* dev dependencies ([2452c22](https://github.com/BenTenmann/protein-classification-service/commit/2452c220462205765e1a72f9074ba7e38bec547f))
+
 # 1.0.0 (2022-02-17)
 
 
