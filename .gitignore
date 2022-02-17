@@ -8,3 +8,4 @@ venv/
 *_files/
 *_cache/
 .coverage
+.ssh
