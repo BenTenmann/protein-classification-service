@@ -3,7 +3,7 @@ orbs:
   codecov: codecov/codecov@3.2.2
 
 executors:
-  python-3-7:
+  python-3-9:
     docker:
       - image: circleci/python:3.9
   node-docker:
@@ -24,12 +24,12 @@ jobs:
           command: npx semantic-release
 
   build-and-test:
-    executor: python-3-7
+    executor: python-3-9
     steps:
       - checkout
       - restore_cache:
           keys:
-            - python-cache-{{ checksum "requirements.txt" }}
+            - python-cache-{{ checksum "requirements-dev.txt" }}
       - run:
           name: install dependencies
           command: |
@@ -37,12 +37,12 @@ jobs:
       - save_cache:
           paths:
             - ~/.cache/pip
-          key: python-cache-{{ checksum "requirements.txt" }}
+          key: python-cache-{{ checksum "requirements-dev.txt" }}
           when: always
       - run:
           name: run unit tests
           command: |
-            python -m pytest -v tests --cov=${CIRCLE_PROJECT_REPONAME//-/_} --cov-report xml
+            python -m pytest -v tests --cov=protein_classification --cov-report xml
       - codecov/upload:
           file: coverage.xml
 

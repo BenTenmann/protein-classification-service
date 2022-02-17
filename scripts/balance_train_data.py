@@ -132,7 +132,7 @@ class ClassWeightingMethods(enum.Enum):
     NONE = 0
     INVERSE_CLASS_FREQUENCY = 1
     INVERSE_SQUARE_ROOT_CLASS_FREQUENCY = 2
-    EFFECTIVE_SAMPLE_NUMBER = 3
+    INVERSE_EFFECTIVE_SAMPLE_NUMBER = 3
 
 
 # ----- Resampling --------------------------------------------------------------------------------------------------- #
@@ -222,7 +222,7 @@ def get_class_weighting_function(cls):
         def _method(counts: np.ndarray, *args, **kwargs):
             return 1 / np.sqrt(counts)
 
-    elif cls == ClassWeightingMethods.EFFECTIVE_SAMPLE_NUMBER:
+    elif cls == ClassWeightingMethods.INVERSE_EFFECTIVE_SAMPLE_NUMBER:
         def _method(class_counts: np.ndarray, beta: float) -> np.ndarray:
             return (1 - beta) / (1 - beta ** class_counts)
 

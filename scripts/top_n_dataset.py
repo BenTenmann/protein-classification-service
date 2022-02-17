@@ -14,7 +14,7 @@ TOP_N = os.environ.get('TOP_N', 1_000)
 def to_jsonl(df: pd.DataFrame, directory: Path) -> None:
     split = df.split.iloc[0]
     out = df.to_dict(orient='records')
-    srsly.write_jsonl(directory / f'{split}-top-{TOP_N}.jsonl', out)
+    srsly.write_jsonl(directory / f'{split}.jsonl', out)
 
 
 def main():

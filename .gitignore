@@ -7,3 +7,4 @@ venv/
 *.ipynb
 *_files/
 *_cache/
+.coverage

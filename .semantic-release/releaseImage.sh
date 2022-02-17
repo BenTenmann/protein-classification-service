@@ -1,0 +1,1 @@
+echo "$1" > /tmp/protein-classification-service-next-tag

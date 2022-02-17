@@ -44,6 +44,8 @@ class OptimizerStep:
         self.optim = optimizer
 
     def __call__(self, loss: torch.Tensor) -> None:
+        if loss is None:
+            return None
         self.optim.zero_grad()
         loss.backward()
         self.optim.step()
