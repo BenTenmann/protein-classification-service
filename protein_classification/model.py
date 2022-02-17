@@ -3,6 +3,8 @@ import math
 import torch
 from torch import nn
 
+from .utils import flatten_batch
+
 __all__ = [
     'ProteinFamilyClassifier',
     'MLP',
@@ -82,21 +84,27 @@ class ProteinFamilyClassifier(nn.Module):
 
 
 class MLP(nn.Module):
-    def __init__(self, d_model: int, seq_len: int, hidden_dim: int, num_labels: int, negative_slope: float, dropout: float):
+    def __init__(self, d_model: int, seq_len: int, hidden_dim: int, num_labels: int, negative_slope: float, dropout: float, flatten_first: bool = False):
         super(MLP, self).__init__()
-        self.proj_1 = nn.Linear(in_features=d_model,
+        seq_len_1 = seq_len ** flatten_first
+        self.proj_1 = nn.Linear(in_features=int(d_model * seq_len_1),
                                 out_features=hidden_dim)
         self.l_relu = nn.LeakyReLU(negative_slope)
-        self.proj_2 = nn.Linear(in_features=hidden_dim * seq_len,
+        seq_len_2 = seq_len ** (not flatten_first)
+        self.proj_2 = nn.Linear(in_features=int(hidden_dim * seq_len_2),
                                 out_features=num_labels)
         self.dropout = nn.Dropout(dropout)
 
+        if flatten_first:
+            self.proj_1 = flatten_batch(self.proj_1)
+        else:
+            self.proj_2 = flatten_batch(self.proj_2)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        batch_size = x.size(0)
         x = self.dropout(x)
         proj = self.proj_1(x)
         act = self.l_relu(proj)
-        out = self.proj_2(act.view(batch_size, -1))
+        out = self.proj_2(act)
         return out
 
 

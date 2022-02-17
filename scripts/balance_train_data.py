@@ -71,6 +71,7 @@ def identifier_check(enumerator: Type[enum.Enum]):
     return _decorator
 
 
+@time_it
 def get_label_map(class_column: pd.Series) -> dict:
     num_classes = class_column.nunique()
     out = dict(zip(class_column.sort_values().unique(), range(num_classes)))
@@ -177,7 +178,7 @@ def get_under_sampling_function(cls):
 
     else:
         raise RuntimeError
-    return _method
+    return time_it(_method)
 
 
 @identifier_check(OverSamplingMethods)
@@ -203,7 +204,7 @@ def get_over_sampling_function(cls):
 
     else:
         raise RuntimeError
-    return _method
+    return time_it(_method)
 
 
 # ----- Reweighting -------------------------------------------------------------------------------------------------- #
@@ -227,9 +228,10 @@ def get_class_weighting_function(cls):
 
     else:
         raise RuntimeError
-    return _method
+    return time_it(_method)
 
 
+@time_it
 def compute_weighting(class_column: pd.Series, fn: Callable, *args, **kwargs) -> dict:
     counts = class_column.value_counts()
     weights = fn(counts.to_numpy(), *args, **kwargs)
@@ -247,6 +249,9 @@ def main():
 
     logging.debug(f'input path: {input_path}')
     logging.debug(f'output path: {output_path}')
+    logging.debug(f'under sampling strategy: {UNDER_SAMPLING_METHOD}')
+    logging.debug(f'under sampling strategy: {OVER_SAMPLING_METHOD}')
+    logging.debug(f're-weighting strategy: {CLASS_WEIGHTING_METHOD}')
 
     df = read_dataframe(input_path)
 

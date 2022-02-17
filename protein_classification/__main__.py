@@ -43,7 +43,13 @@ def main():
     dev_loader = load_dataloader(environ.get('DEV_DATA'), **loader_map)
     test_loader = load_dataloader(environ.get('TEST_DATA'), **loader_map)
 
-    loss_fn = nn.CrossEntropyLoss()
+    if 'LABEL_WEIGHTS' in environ:
+        lw = srsly.read_json(environ.get('LABEL_WEIGHTS'))
+        weights = torch.tensor(lw.get('weights'), dtype=torch.float32, device=DEVICE)
+        loss_fn = nn.CrossEntropyLoss(weights)
+    else:
+        loss_fn = nn.CrossEntropyLoss()
+
     optim_param = config.get('optim', {'lr': 1e-3})
     optim = torch.optim.Adam(model.parameters(), **optim_param)
     optimizer = OptimizerStep(optim)
