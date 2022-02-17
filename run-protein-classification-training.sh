@@ -15,12 +15,12 @@ if [[ $1 == "full" ]]; then
   IDENTIFIER=""
 fi
 
-export CONFIG_MAP="${PWD}"/manifest/mlp-one-hot.yml
+export CONFIG_MAP="${PWD}"/manifest/mlp.yml
 export TRAIN_DATA="${DATA_DIR}"/train${IDENTIFIER}-resampled.jsonl
 export DEV_DATA="${DATA_DIR}"/dev${IDENTIFIER}.jsonl
 export TEST_DATA="${DATA_DIR}"/test${IDENTIFIER}.jsonl
 export LABEL_MAP="${DATA_DIR}"/label-map.json
-export TOKEN_MAP="${DATA_DIR}"/oh-token-map.json
+export TOKEN_MAP="${DATA_DIR}"/kd-token-map.json
 export SAVE_PATH="${PWD}"/model-weights
 
 if [[ $2 == "weight" ]]; then
