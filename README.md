@@ -1,5 +1,7 @@
 # protein-classification-service
 
+[![CircleCI](https://circleci.com/gh/BenTenmann/protein-classification-service/tree/main.svg?style=svg)](https://circleci.com/gh/BenTenmann/protein-classification-service/tree/main)
+
 This service takes an unaligned protein sequence as a query and returns a set of potential protein families.
 
 ## About
