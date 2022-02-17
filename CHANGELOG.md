@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.0.3...deploy-1.1.0) (2022-02-17)
+
+
+### Features
+
+* add .get-tag + rm dl script ([8d36719](https://github.com/BenTenmann/protein-classification-service/commit/8d367196cc85236ff0cfcf12a57c35d25ea486d2))
+
 ## [1.0.3](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.0.2...deploy-1.0.3) (2022-02-17)
 
 
