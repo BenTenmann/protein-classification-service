@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Callable
+from typing import Callable, Optional
 
 import torch
 import wandb
@@ -17,10 +17,33 @@ __all__ = [
 
 
 class OptimizerStep:
+    """
+    Thin wrapper around a `torch.optim.Optimizer` object. Handles optimizer logic and is useful for writing a generic
+    model execution loop (see below).
+
+    Attributes
+    ----------
+    optim: torch.optim.Optimizer
+        The optimizer object.
+
+    Examples
+    --------
+    The model training use case:
+    >>> model = nn.Linear(10, 1)
+    >>> optim = torch.optim.Adam(model.parameters(), lr=1e-3)
+    >>> optimizer = OptimizerStep(optim)
+    >>> loss_fn = nn.BCELoss()
+    >>> X = torch.randn(64, 10)
+    >>> y = (torch.randn(64, 1) >= 0.).float()
+    >>> y_hat = model(X)
+    >>> loss = loss_fn(y_hat, y)
+    >>> optimizer(loss)  # does update step
+    """
+
     def __init__(self, optimizer: torch.optim.Optimizer):
         self.optim = optimizer
 
-    def __call__(self, loss: torch.Tensor):
+    def __call__(self, loss: torch.Tensor) -> None:
         self.optim.zero_grad()
         loss.backward()
         self.optim.step()
@@ -28,9 +51,41 @@ class OptimizerStep:
 
 def _loop(model: nn.Module,
           dataset: DataLoader,
-          loss_fn: Callable = lambda *_: None,
-          optimizer: Callable = lambda _: None,
+          loss_fn: Optional[Callable] = lambda *_: None,
+          optimizer: Optional[Callable] = lambda _: None,
           status: str = 'training'):
+    """
+    Generic model execution loop. Iterates over a dataloader and creates predictions from a model. Under certain
+    parameters it computes a loss and performs update steps.
+
+    Parameters
+    ----------
+    model: nn.Module
+        The model used for generating predictions.
+    dataset: DataLoader
+        The dataloader object, providing the batched inputs and targets in a (X, y) tuple of tensors.
+    loss_fn: Optional[Callable]
+        A callable taking a number of positional arguments and returning either a `torch.Tensor` or `None`. The inputs
+        to the callable are, in order, the model predictions and the model targets. If unset, the callable returns
+        `None`, i.e. no loss is computed.
+    optimizer: Optional[Callable]
+        A callable taking a single positional argument and returning `None`. The argument to `optimizer` is the output
+        of `loss_fn`. If unset, the callable returns `None` and no optimizer step is performed.
+    status: str
+        The execution status identifier. Usually one of: 'training', 'testing', 'validation'. Used by logger to group
+        metrics.
+
+    Returns
+    -------
+    model: nn.Module
+        The input model.
+
+    Examples
+    --------
+    >>> import protein_classification.utils as utils
+    >>> dataloader = utils.load_dataloader('path/to/file.jsonl', ...)
+    >>> model = _loop(model, dataloader, loss_fn, optimizer, status='training')
+    """
     predictions = []
     targets = []
     for (X, y) in tqdm(dataset, desc=status, unit='batch'):
@@ -49,6 +104,7 @@ def _loop(model: nn.Module,
     return model
 
 
+# partial functions wrapping the generic loop for convenience
 training = partial(_loop, status='training')
 validation = torch.no_grad()(partial(_loop, status='validation'))
 testing = torch.no_grad()(partial(_loop, status='testing'))
