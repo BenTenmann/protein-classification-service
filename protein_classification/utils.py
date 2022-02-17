@@ -13,7 +13,6 @@ from .dataset import (
 )
 
 __all__ = [
-    'flatten_batch',
     'load_dataloader',
     'load_tokenizer',
     'now',
@@ -48,11 +47,3 @@ def load_tokenizer(path: Path or str) -> Tokenizer:
 def now():
     out = datetime.now().strftime('%Y-%m-%d-%X')
     return out
-
-
-def flatten_batch(fn):
-    def _fn(x: torch.Tensor):
-        batch_size = x.size(0)
-        out = fn(x.view(batch_size, -1))
-        return out
-    return _fn

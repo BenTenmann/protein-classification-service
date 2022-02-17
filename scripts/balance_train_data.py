@@ -224,7 +224,7 @@ def get_class_weighting_function(cls):
 
     elif cls == ClassWeightingMethods.EFFECTIVE_SAMPLE_NUMBER:
         def _method(class_counts: np.ndarray, beta: float) -> np.ndarray:
-            return (1 - beta ** class_counts) / (1 - beta)
+            return (1 - beta) / (1 - beta ** class_counts)
 
     else:
         raise RuntimeError
