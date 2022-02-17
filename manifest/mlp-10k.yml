@@ -8,6 +8,7 @@ model:
     negative_slope: 0.3
     num_labels: 15259
     dropout: 0.01
+    flatten_first: true
 env:
   batch_size: 128
   epochs: 4

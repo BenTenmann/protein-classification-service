@@ -3,13 +3,22 @@ import math
 import torch
 from torch import nn
 
-from .utils import flatten_batch
-
 __all__ = [
     'ProteinFamilyClassifier',
     'MLP',
     'MLPOneHot'
 ]
+
+
+class FlattenBatch(nn.Module):
+    def __init__(self, module: nn.Module):
+        super(FlattenBatch, self).__init__()
+        self.module = module
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        batch_size = x.size(0)
+        out = self.module(x.view(batch_size, -1))
+        return out
 
 
 class PositionalEncoding(nn.Module):
@@ -96,9 +105,9 @@ class MLP(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         if flatten_first:
-            self.proj_1 = flatten_batch(self.proj_1)
+            self.proj_1 = FlattenBatch(self.proj_1)
         else:
-            self.proj_2 = flatten_batch(self.proj_2)
+            self.proj_2 = FlattenBatch(self.proj_2)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.dropout(x)
