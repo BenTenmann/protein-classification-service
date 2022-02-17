@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if ! command -v sed &> /dev/null; then
+  echo "error: sed not found"
+  exit 127
+fi
+
+TAG=$(sed -En '1 s/.*\[([0-9.]+)\].*/\1/p' "${PWD}"/CHANGELOG.md 2> /dev/null || echo '0.1.0')
+echo "${TAG}"

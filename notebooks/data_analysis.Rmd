@@ -149,10 +149,11 @@ tmp %>%
   knitr::kable()
 ```
 
-The variability in sequence length can be addressed in two ways:
+The variability in sequence length can be addressed in three ways:
 
 1. **Padding**: we can pad the sequences with empty tokens as can be seen in the multiple sequence alignments. This does not have to happen via alignment, however; we can simply right, left or center pad. The complement to padding is truncation, where we simply remove tokens for sequences surpassing the length threshold. Whichever approach is taken, the result is a set of sequences with uniform length
 2. **Pooling**: alternatively, tokens can be pooled in some way to produce a single representation for the whole sequence. A classic pooling method is _Term-Frequency Inverse Document Frequency_ (TF-IDF), where the terms are the set of overlapping $k$-mers ($k \geq 1$; equivalent to $n$-grams) and the documents are the sequences. This transforms each sequence into a $D \leq |\mathcal{V}|^k$ dimensional vector, where $\mathcal{V}$ is the vocabulary (amino acid codes in our case). Another approach is pooling learned, distributed token representations along the sequence dimension. For example, a pre-trained protein language model, such as ProtBERT [], can be used to embed the tokens into a high dimensional space and then the tokens can be pooled (mean, max etc.) to yield a single dense vector representation for the sequence.
+3. **Concatenating**: the token representations can simply be concatenated together to form a single vector of dimension $L \times H$, where $L$ is the length of the sequence and $H$ is the feature dimension of each token.
 
 Having investigated the model inputs, we turn our attention now to the model targets. Due to the one-to-one mapping between family ID and family acccession, I use family ID here arbitrarily. 
 Looking at the distribution of abundances for each family, i.e. the number of examples we have for each class, we observe a power-law distribution. This means that we have a low number of high support classes, and a high number of low support classes.
@@ -200,4 +201,6 @@ This imbalance can be addressed in three ways:
 
 ## Method Explanation
 
+Given the nature of the data and the problem, we need to build a multi-class classifier, which can take sequence data and produce a class label. Hence, there are two primary questions: 1) how to represent the data and 2) how to deal with the class imbalance.
 
+I first deal with the data representation problem, creating a classifier based on the top $N$ 

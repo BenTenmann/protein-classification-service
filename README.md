@@ -15,7 +15,7 @@ This service assumes `docker` to be installed. To run this service, you first ha
 
 ```bash
 IMAGE=$(dirname ${PWD})
-TAG=$(cat .tag)
+TAG=$(${PWD}/.get-tag)
 docker build -t ${IMAGE}:${TAG} .
 ```
 

@@ -233,7 +233,7 @@ def get_class_weighting_function(cls):
 
 @time_it
 def compute_weighting(class_column: pd.Series, fn: Callable, *args, **kwargs) -> dict:
-    counts = class_column.value_counts()
+    counts = class_column.value_counts().sort_index()
     weights = fn(counts.to_numpy(), *args, **kwargs)
     out = {'weights': weights.tolist()}
     return out
