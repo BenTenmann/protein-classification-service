@@ -8,20 +8,28 @@ if ! command -v python3 &> /dev/null; then
 fi
 
 PROJECT=protein-classification
-PYPATH="${PWD}"/venv/bin
-DATA_DIR="${PWD}"/data/random_split/top-n
+DATA_DIR="${PWD}"/dump-2
+IDENTIFIER=-top-1000
+
+if [[ $1 == "full" ]]; then
+  IDENTIFIER=""
+fi
 
 export CONFIG_MAP="${PWD}"/manifest/mlp-one-hot.yml
-export TRAIN_DATA="${DATA_DIR}"/train-top-1000-resampled.jsonl
-export DEV_DATA="${DATA_DIR}"/dev-top-1000.jsonl
-export TEST_DATA="${DATA_DIR}"/test-top-1000.jsonl
+export TRAIN_DATA="${DATA_DIR}"/train${IDENTIFIER}-resampled.jsonl
+export DEV_DATA="${DATA_DIR}"/dev${IDENTIFIER}.jsonl
+export TEST_DATA="${DATA_DIR}"/test${IDENTIFIER}.jsonl
 export LABEL_MAP="${DATA_DIR}"/label-map.json
-export TOKEN_MAP="${PWD}"/data/oh-token-map.json
+export TOKEN_MAP="${DATA_DIR}"/oh-token-map.json
 export SAVE_PATH="${PWD}"/model-weights
+
+if [[ $2 == "weight" ]]; then
+  export LABEL_WEIGHTS="${DATA_DIR}"/label-weights.json
+fi
 
 export SOURCE_COLUMN="sequence"
 export TARGET_COLUMN="family_accession"
-export SOURCE_TYPE="LONG"
+export SOURCE_TYPE="FLOAT"
 export TARGET_TYPE="LONG"
 
 export WANDB_ENTITY=bentenmann
@@ -31,4 +39,4 @@ if [[ -z ${WANDB_API_KEY} ]]; then
   echo "WARNING: api key not set"
 fi
 
-"${PYPATH}"/python3 -m "${PROJECT//-/_}"
+python3 -m "${PROJECT//-/_}"
