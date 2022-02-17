@@ -21,6 +21,13 @@ __all__ = [
 
 
 def set_seed() -> None:
+    """
+    Set the seed of the system.
+
+    Returns
+    -------
+    None
+    """
     random.seed(42)
     torch.manual_seed(42)
 
@@ -30,6 +37,33 @@ def load_dataloader(path: Path or str,
                     label_map: dict,
                     batch_size: int,
                     **tokenizer_args) -> DataLoader:
+    """
+    Load a dataloader object using data from a specified file.
+
+    Parameters
+    ----------
+    path: Path or str
+        Path specifying input data in `.jsonl` format.
+    tokenizer: Tokenizer
+        The tokenizer used by the ProteinFamilyDataset object.
+    label_map: Dict[str, int]
+        The label map used  by the ProteinFamilyDataset object.
+    batch_size: int
+        The loader batch size/
+    tokenizer_args: Any
+        Keyword arguments passed to the tokenizer on call.
+
+    Returns
+    -------
+    loader: DataLoader
+        The initialised DataLoader object.
+
+    Examples
+    --------
+    >>> tokenizer = load_tokenizer('path/to/token-map.json')
+    >>> label_map = srsly.read_json('path/to/label-map.json')
+    >>> dataloader = load_dataloader('path/to/train.jsonl', tokenizer, label_map, batch_size=10, max_length=512)
+    """
     lines = srsly.read_jsonl(path)
     data_frame = pd.DataFrame(lines)
 
@@ -39,11 +73,32 @@ def load_dataloader(path: Path or str,
 
 
 def load_tokenizer(path: Path or str) -> Tokenizer:
+    """
+    Load a Tokenizer object by specifying a target token map.
+
+    Parameters
+    ----------
+    path: Path or str
+        Path specifying the target token map in `.json` format.
+
+    Returns
+    -------
+    out: Tokenizer
+        The initialised Tokenizer object.
+    """
     token_map = srsly.read_json(path)
     out = Tokenizer(token_map)
     return out
 
 
-def now():
+def now() -> str:
+    """
+    Convenience wrapper for getting the current datetime in the `%Y-%m-%d-%X` format.
+
+    Returns
+    -------
+    out: str
+        The current datetime in the `%Y-%m-%d-%X` format.
+    """
     out = datetime.now().strftime('%Y-%m-%d-%X')
     return out
