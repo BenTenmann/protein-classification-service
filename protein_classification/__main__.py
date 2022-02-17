@@ -22,11 +22,16 @@ from .utils import (
 
 
 def main():
+    """
+    Entrypoint for model training and benchmarking script, accessed via the command line. Refer to `__init__.py` for
+    variable definitions.
+    """
     config_path = Path(environ.get('CONFIG_MAP'))
     config = srsly.read_yaml(config_path)
 
     model_conf = config.get('model', {})
     model_param = model_conf.get('param', {})
+    # gets the model object we want; gives us more flexibility training different models
     model = getattr(mdl, model_conf.get('name'))(**model_param)
     model.to(DEVICE)
 
