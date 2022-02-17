@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.0.1...deploy-1.0.2) (2022-02-17)
+
+
+### Bug Fixes
+
+* dev dep typo ([fdaaba1](https://github.com/BenTenmann/protein-classification-service/commit/fdaaba162f7f165c615a3f2540e4cff32f196930))
+
 ## [1.0.1](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.0.0...deploy-1.0.1) (2022-02-17)
 
 
