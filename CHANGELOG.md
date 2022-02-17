@@ -1,3 +1,11 @@
+## [1.0.3](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.0.2...deploy-1.0.3) (2022-02-17)
+
+
+### Bug Fixes
+
+* update cci-codecov ([21ab5a7](https://github.com/BenTenmann/protein-classification-service/commit/21ab5a710e3bb2451231bef0a4e3a1335940a9d6))
+* update cci-codecov - 2 ([31f0d2c](https://github.com/BenTenmann/protein-classification-service/commit/31f0d2c9e7e1ceed27ab572578c0670ddb609c06))
+
 ## [1.0.2](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.0.1...deploy-1.0.2) (2022-02-17)
 
 
