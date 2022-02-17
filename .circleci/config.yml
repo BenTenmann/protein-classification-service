@@ -45,6 +45,7 @@ jobs:
             python -m pytest -v tests --cov=protein_classification --cov-report xml
       - codecov/upload:
           file: coverage.xml
+          token: ${CODECOV_TOKEN}
 
 workflows:
   version: 2
