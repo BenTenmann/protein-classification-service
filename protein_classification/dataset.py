@@ -130,7 +130,7 @@ class ProteinFamilyDataset(Dataset):
             The tokenizer object used to map the input sequences from alphabetical to numeric space.
         label_map: Dict[str, int]
             The string to index mapping of the example labels.
-        tokenizer_args: Dict[str, Any]
+        tokenizer_args: Any
             The arguments passed to the tokenizer upon call.
         """
         self.data_source = data_source
