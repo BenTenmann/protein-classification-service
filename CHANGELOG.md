@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.1.0...deploy-1.2.0) (2022-02-18)
+
+
+### Features
+
+* add refs ([9193cf7](https://github.com/BenTenmann/protein-classification-service/commit/9193cf7aa6d4c2f39488c8f13f905a4235566e19))
+
 # [1.1.0](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.0.3...deploy-1.1.0) (2022-02-17)
 
 
