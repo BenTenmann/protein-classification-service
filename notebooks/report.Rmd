@@ -28,7 +28,7 @@ library(tidyverse)
 ```
 
 
-The data we will use is the `Pfam seed random split`, which was published by Google Research in conjuction with their paper "Using Deep Learning to Annotate the Protein Universe". The data can be downloaded in its original form from [here](https://www.kaggle.com/googleai/pfam-seed-random-split), or alternatively in `.jsonl` format from [here](). It is a pre-split dataset containing aligned and unaliged protein domain sequences with their associated family IDs and accession numbers. Moreover, a sequence identifier is provided, which maps the domain sequence back to its protein of origin.
+The data we will use is the `Pfam seed random split`, which was published by Google Research in conjuction with their paper "Using Deep Learning to Annotate the Protein Universe". The data can be downloaded in its original form from [here](https://www.kaggle.com/googleai/pfam-seed-random-split), or alternatively in `.jsonl` format from [here](https://drive.google.com/uc?export=download&id=1i50W6CLBWmFek7X75gBcTrZyC2UNaF6z). It is a pre-split dataset containing aligned and unaliged protein domain sequences with their associated family IDs and accession numbers. Moreover, a sequence identifier is provided, which maps the domain sequence back to its protein of origin.
 
 As a first step, let's load the data into memory (~ 1 million examples is manageable).
 

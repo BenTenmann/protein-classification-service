@@ -1,6 +1,6 @@
 # report
 
-The pre-compiled HTML of the report can be downloaded [here](). Alternatively, it can be re-run after setting up the environment:
+The pre-compiled HTML of the report can be downloaded [here](https://drive.google.com/uc?export=download&id=1R1RgzynOvY3YTfTbGQNrr3TxyMWexNF5). Alternatively, it can be re-run after setting up the environment:
 
 ```bash
 export NOTEBOOK_ROOT=$(realpath ..)

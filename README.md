@@ -3,7 +3,7 @@
 [![CircleCI](https://circleci.com/gh/BenTenmann/protein-classification-service/tree/main.svg?style=shield&circle-token=3b42235dd8a2f18865d981432d09730121915ec1)](https://circleci.com/gh/BenTenmann/protein-classification-service/tree/main)
 [![codecov](https://codecov.io/gh/BenTenmann/protein-classification-service/branch/main/graph/badge.svg?token=XJYMGM5ZVK)](https://codecov.io/gh/BenTenmann/protein-classification-service)
 
-This service takes an unaligned protein sequence as a query and returns a set of potential protein families from the 1000 most abundant families in Pfam.
+This service takes an unaligned protein sequence as a query and returns a potential protein family from the 1000 most abundant families in Pfam.
 
 ## About
 
