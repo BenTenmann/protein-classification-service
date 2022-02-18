@@ -3,6 +3,7 @@ title: "Building a Protein Classifier"
 author: "Benjamin Tenmann"
 date: "18/02/2022"
 output: html_document
+bibliography: references.bib
 ---
 
 ```{r setup, include=FALSE}
@@ -17,7 +18,7 @@ Protein family classification is the task of assigning a family ID to a peptide.
 
 A good example of a protein superfamily (SF) is the G-protein coupled receptor (GPCR) SF, which is a diverse set of cell-surface receptors involved in a variety of cell-signalling tasks. It consists of seven transmembrane domains, connected by three intracellular and three extracellular loops, of which the extracellular loops form the ligand-binding domain. The rhodopsin GPCR family, for example, are found in rod cells in the retina and are involved in phototransduction. When light strikes the rhodopsin-bound retinal, the retinal isomerizes, causing a conformational change of the GPCR. This causes a signalling cascade, resulting in the hydrolysis of cyclic guanosine monophosphate (cGMP) into GMP. This, in turn, causes the ligand-gated sodium channels in the rod cell to close, preventing action potentials and hence signalling that light has been detected. In fact, phototransduction in rod cells is a special case in neural signalling, as the absence of signal from the rod cell indicates stimulation.
 
-Protein family classification was classically done by a combination of multiple sequence alignment, Hidden Markov Model (HMM) profiling, structural modelling and exhaustive experimental validation. Recently, deep learning has been applied to this area, setting a new state-of-the-art Principally, ProtCNN [] implements a ResNet-style architecture, trained on sequences of one-hot encodings of the amino acid letters. Authors showed that ProtCNN consistently outperformed BLASTp and HMMer when trying to classify protein families, expecially at low sequence identity. 
+Protein family classification was classically done by a combination of multiple sequence alignment, Hidden Markov Model (HMM) profiling, structural modelling and exhaustive experimental validation. Recently, deep learning has been applied to this area, setting a new state-of-the-art Principally, ProtCNN [@bileschi2019using] implements a ResNet-style architecture, trained on sequences of one-hot encodings of the amino acid letters. Authors showed that ProtCNN consistently outperformed BLASTp and HMMer when trying to classify protein families, expecially at low sequence identity. 
 
 ## Dataset Analysis
 
@@ -76,9 +77,9 @@ n_classes <- df$family_id %>%
   length()
 ```
 
-From this we get a total of `r n_classes` (17929 in the paper). It is important to note here, that family ID and family accession can be used interchangeably, as we are using a pinned version of the Pfam seed dataset. In this case, the version suffixes on the accession codes are redundant and we have a one-to-one mapping between ID and accession code. However, a different version of Pfam may disrupt this mapping (see later).
+From this we get a total of `r n_classes` (17929 in the paper). It is important to note here, that family ID and family accession can be used interchangeably, as we are using a pinned version of the Pfam seed dataset. In this case, the version suffixes on the accession codes are redundant and we have a one-to-one mapping between ID and accession code. However, a different version of Pfam may disrupt this mapping.
 
-The provided protein domains are represented as strings of alphabetical letters, where each letter is the single-letter representation for a given amino acid. Amino acids are a type of organic compound consisting of an amino and a carboxylate group, along with a side chain ($R$ group) branching off the $\alpha$ carbon. It is the $R$ group which differentiates the amino acids from one another, giving each a unique set of physicochemical properties. For example, cysteine (Cys/C) is defined by the thiol sidechain, which can unqiuely create disulphide bonds with another cysteine side chain distal from itself in sequence. This enables the creation of deep pocket folds and rigid maintenance therof.
+The provided protein domains are represented as strings of alphabetical letters, where each letter is the single-letter representation for a given amino acid. Amino acids are a type of organic compound consisting of an amino and a carboxylate group, along with a side chain ($R$ group) branching off the $\alpha$ carbon. It is the $R$ group which differentiates the amino acids from one another, giving each a unique set of physicochemical properties. For example, cysteine (Cys/C) is defined by its thiol sidechain, which can unqiuely create disulphide bonds with other cysteine side chains distal from itself in sequence. This enables the creation of deep pocket folds and rigid maintenance therof.
 
 In nature, there are 20 frequently occurring amino acids. Let's check the amino acid vocabulary in the dataset:
 
@@ -110,13 +111,12 @@ tibble(
   theme(text = element_text(family = "Times"))
 ```
 
-In the paper, the rare amino-acids are represented as pads.
 
-### Distribution Analysis
+### Statistics
 
 Now that we have validated that dataset is complete, we can look at some summary statistics and distributions of the data. 
 
-In [] the task was family classification from the unaligned amino acid sequences of the protein domains. To do the same, we have to find a salient mapping from the discrete, alphabetic, variable size space to a continuous, numeric and fixed size space. First off, let's look at the distribution of (unaligned) sequence lengths.
+In @bileschi2019using the task was family classification from the unaligned amino acid sequences of the protein domains. To do the same, we have to find a salient mapping from the discrete, alphabetic, variable size space to a continuous, numeric and fixed size space. First off, let's look at the distribution of (unaligned) sequence lengths.
 
 ```{r fig.align='center'}
 df %>%
@@ -151,11 +151,10 @@ tmp %>%
   knitr::kable()
 ```
 
-The variability in sequence length can be addressed in three ways:
+The variability in sequence length can be addressed in two ways:
 
 1. **Padding**: we can pad the sequences with empty tokens as can be seen in the multiple sequence alignments. This does not have to happen via alignment, however; we can simply right, left or center pad. The complement to padding is truncation, where we simply remove tokens for sequences surpassing the length threshold. Whichever approach is taken, the result is a set of sequences with uniform length
-2. **Pooling**: alternatively, tokens can be pooled in some way to produce a single representation for the whole sequence. A classic pooling method is _Term-Frequency Inverse Document Frequency_ (TF-IDF), where the terms are the set of overlapping $k$-mers ($k \geq 1$; equivalent to $n$-grams) and the documents are the sequences. This transforms each sequence into a $D \leq |\mathcal{V}|^k$ dimensional vector, where $\mathcal{V}$ is the vocabulary (amino acid codes in our case). Another approach is pooling learned, distributed token representations along the sequence dimension. For example, a pre-trained protein language model, such as ProtBERT [], can be used to embed the tokens into a high dimensional space and then the tokens can be pooled (mean, max etc.) to yield a single dense vector representation for the sequence.
-3. **Concatenating**: the token representations can simply be concatenated together to form a single vector of dimension $L \times H$, where $L$ is the length of the sequence and $H$ is the feature dimension of each token.
+2. **Pooling**: alternatively, tokens can be pooled in some way to produce a single representation for the whole sequence. A classic pooling method is _Term-Frequency Inverse Document Frequency_ (TF-IDF) [@rajaraman2011mining], where the terms are the set of overlapping $k$-mers ($k \geq 1$; equivalent to $n$-grams) and the documents are the sequences. This transforms each sequence into a $D \leq |\mathcal{V}|^k$ dimensional vector, where $\mathcal{V}$ is the vocabulary (amino acid codes in our case). Another approach is pooling learned, distributed token representations along the sequence dimension. For example, a pre-trained protein language model, such as ProtBERT [@Elnaggar2020.07.12.199554], can be used to embed the tokens into a high dimensional space and then the tokens can be pooled (mean, max etc.) to yield a single dense vector representation for the sequence.
 
 Having investigated the model inputs, we turn our attention now to the model targets. Due to the one-to-one mapping between family ID and family acccession, I use family ID here arbitrarily. 
 Looking at the distribution of abundances for each family, i.e. the number of examples we have for each class, we observe a power-law distribution. This means that we have a low number of high support classes, and a high number of low support classes.
@@ -196,9 +195,9 @@ tmp %>%
 
 This imbalance can be addressed in three ways:
 
-1. **Resampling**: over-represented classes can be undersampled, under-represented classes can be oversampled. There are a number of algorithms for either, including random sampling (with replacement for over-sampling) and SMOTE.
-2. **Reweighting**: loss terms can be re-weighted w.r.t their class' abundance in the training set. The three primary strategies are inverse sample number, inverse square root sample number and effective sample number. Under certain conditions, loss re-weighting can be effectively equivalent to resampling the dataset.
-3. **Probelm reformulation**: failing the latter two, the problem can be reformulated. For example, a multi-class classification problem can be restated as a link prediction task, where the target is binary: given example $x_i$ and $x_j$, state the probability that they belong to the same class $C_k$ (edge). Now $C_k$ has $\frac{N_k}{2}(N_k - 1)$ examples, where $N_k$ is the original number of examples.
+1. **Resampling**: over-represented classes can be undersampled, under-represented classes can be oversampled. There are a number of algorithms for either, including random sampling (with replacement for over-sampling) and SMOTE [@chawla2002smote].
+2. **Reweighting**: loss terms can be re-weighted w.r.t their class' abundance in the training set, also known as Cost Sensitive Learning. The three primary strategies are inverse sample number [@huang2016learning], inverse square root sample number [@mikolov2013distributed] and inverse effective sample number [@cui2019class].
+3. **Probelm reformulation**: failing the latter two, the problem can be reformulated. For example, a multi-class classification problem can be restated as a link prediction task, where the target is binary: given example $x_i$ and $x_j$, state the probability that they belong to the same class $k$ (edge). Now $k$ has $\frac{N_k}{2}(N_k - 1)$ examples, where $N_k$ is the original number of examples. This is also known as the one-vs-one formulation of the multi-class classification probelm. 
 
 
 ## Methods & Materials
@@ -207,20 +206,21 @@ Given the nature of the data and the problem, we need to build a multi-class cla
 
 ### Sequence Representation
 
-I first deal with the data representation problem, creating a classifier based on the top 1000 most abundant protein families. Like ProtCNN, I initially represent each sequence as a sequence of one-hot encodings corresponding to the amino acid letters. I then repeat the same experiment, representing the amino acids using an index of their physicochemical properties, specifically their Kidera Factors. The Kidera Factors give us a 10-dimensional representation for each of the 20 most frequent amino acids. These factors are 10 components extracted from a total of 188 experimentally determined physicochemical properties and roughly correspond to properties such as hydrophobicity, $\alpha$-helix structure preference and $\beta$-sheet structure preference.
-The data for the classifier was prepared by selecting the top 1000 most abundant families and randomly undersampling them to obtain a uniform distribution over all classes ($N_k = 228$). Sequences were right padded / truncated to a uniform lenght of 512 and unknown (i.e. rare) amino acids were represented as $\mathbf{0}$ (equivalent to a pad token).
+I first deal with the data representation problem, creating a classifier based on the top 1000 most abundant protein families. Like ProtCNN, I initially represent each sequence as a sequence of one-hot encodings corresponding to the amino acid letters. I then repeat the same experiment, representing the amino acids using an index of their physicochemical properties, specifically their Kidera Factors [@kidera1985statistical]. The Kidera Factors give us a 10-dimensional representation for each of the 20 most frequent amino acids. These factors are 10 components extracted from a total of 188 experimentally determined physicochemical properties and roughly correspond to properties such as hydrophobicity, $\alpha$-helix structure preference and $\beta$-sheet structure preference.
+The data for the classifier was prepared by selecting the top 1000 most abundant families and randomly undersampling them to obtain a uniform distribution over all classes ($N_k = 228$). Sequences were right padded / truncated to a uniform lenght of 512 and unknown (i.e. rare) amino acids were represented as $\mathbf{0}$ (equivalent to a pad token), as described in @bileschi2019using.
 
 ### Model Architecture
 
-In terms of model architecture, I primarily explored Multi-layer Perceptrons (MLP). The reason for this choice is that MLPs are computationally efficient, while still being universal function approximators. They are hence a good baseline for many modelling tasks. Other archictectures with better priors for sequence modelling were primarily excluded on grounds of compute performance. Transformers, for example, have become the de facto standard for NLP and much of biological sequence learning in recent years (BERT etc.). However, they are computationally prohibitive given the scope of the project --- in part due to the self-attention mechanism scaling quadratically with sequence length.
+In terms of model architecture, I primarily explored Multi-layer Perceptrons (MLP) [@haykin2004comprehensive]. The reason for this choice is that MLPs are computationally efficient, while still being universal function approximators. They are hence a good baseline for many modelling tasks. Other archictectures with better priors for sequence modelling were primarily excluded on grounds of compute performance. Transformers [@vaswani2017attention], for example, have become the de facto standard for NLP and much of biological sequence learning in recent years [@devlin2018bert; @Elnaggar2020.07.12.199554]. However, they are computationally prohibitive given the scope of the project --- in part due to the self-attention mechanism scaling quadratically with sequence length.
+
 MLPs are defined here as 
 
 $$
 F(x) = W_h \sigma\left(W_i x^\intercal + b_i\right)^\intercal + b_h
 $$
 
-where $\sigma$ is some element-wise non-linear function of $W_i x^\intercal + b_i$, $b_i$ and $b_h$ are the layer biases and $W_i$ and $W_h$ are the weight matrices. The dimensions of $W_i$ and $W_h$ are $H \times K$ and $C \times M$, respectively, where $M = H \times L$ ($L$ is the sequence length). In other words, we concatenate the tokens of the sequence in the hidden layer.
-The non-linear function $\sigma$ here is the leaky regularized linear unit (leaky ReLU), which is a piecewise linear function:
+where $\sigma$ is some element-wise non-linear function of $W_i x^\intercal + b_i$, $b_i$ and $b_h$ are the layer biases and $W_i$ and $W_h$ are the weight matrices. The dimensions of $W_i$ and $W_h$ are $H \times K$ and $C \times M$, respectively, where $M = H \times L$ and $L$ is the sequence length. In other words, we concatenate the tokens of the sequence in the hidden layer.
+The non-linear function $\sigma$ is the leaky regularized linear unit (leaky ReLU), which is a piecewise linear function:
 
 $$
 \sigma(z) = \max(z, \beta z) \\
@@ -237,26 +237,26 @@ $$
 \hat{y} = F(x)
 $$
 
-The gradient $\nabla\mathcal{L}$ w.r.t to each parameter $w \in \theta$ ($\theta := \{W_i, W_h\}$) is computed via standard back-propagation and parameters updated using an Adam optimizer with a constant update step-size $\eta = 10^{-5}$.
+The gradient $\nabla\mathcal{L}$ w.r.t to each parameter $w \in \theta$ ($\theta := \{W_i, W_h\}$) was computed via standard back-propagation and parameters updated using an Adam optimizer [@kingma2014adam] with a constant update step-size $\eta = 10^{-5}$.
 
 
 ### Scaling and Class Imbalance
 
 Finally, I use the best performing representation to classify the top 10,000 most abundant protein families to investigate scaling properties and class imbalance. I try two loss re-weighting schemes: 1) inverse sample number and inverse effective sample number. Class over-sampling was also considered, however was discarded as it only exacerbated the computational contraints.
 
-Inverse sample number is the simplest loss re-weighting techique and is defined as $p_k = N_k^{-1}$. Inver effective sample number, on the other hand, postulates that as the number of examples increases, the number of effective samples asymptotes. We can intuit this as when a class has many examples, an additional example is unlikely add much more information, as opposed to a class with few examples. The effective number of examples $E_k$ for class $C_k$ is defined as
+Inverse sample number is the simplest loss re-weighting techique and is defined as $p_k = N_k^{-1}$. Inverse effective sample number, on the other hand, postulates that as the number of examples increases, the number of effective samples asymptotes. We can intuit this as when a class has many examples, an additional example is unlikely add much more information, as opposed to a class with few examples. The effective number of examples $E_k$ for class $k$ is defined as
 
 $$
 E_k = \frac{1 - \lambda^{N_k}}{1 - \lambda} \\
 \lambda = \frac{P - 1}{P} 
 $$
-where $P$ is the total volume of the sample space for class $C_k$. However, since the volume is unkown, $\lambda$ becomes a hyper-parameter with recommended values around $0.9, 0.99, 0.999$ etc.. The weighting scheme, then, is defined as $p_k = \frac{1 - \lambda}{1 - \lambda^{N_k}}$ and effectively works as a smoothing function on the weights, as compared to the standard inverse sample number weighting.
+where $P$ is the total volume of the sample space for class $k$. However, since the volume is unkown, $\lambda$ becomes a hyper-parameter with recommended values around $0.9, 0.99, 0.999$ etc.. The weighting scheme, then, is defined as $p_k = \frac{1 - \lambda}{1 - \lambda^{N_k}}$ and effectively works as a smoothing function on the weights, as compared to the standard inverse sample number weighting.
 
 ## Results
 
 ### Top 1k Classifier
 
-Under certain hyper-parameter settings, classification of the top 1000 protein families becomes trivial --- even for MLP architectures. In the table below, we can see the macro-averaged recall, precision and F1 scores for the one-hot encoding and Kidera Factor based models on dev and test sets. We can see that both models perform well on both sets, with the model trained on the Kidera features slightly outperforming its naive counter-part in terms of F1.
+Under certain hyper-parameter settings, classification of the top 1000 protein families becomes trivial --- even for MLP architectures. In the table below, we can see the macro-averaged recall, precision and F1 scores for the one-hot encoding and Kidera Factor based models on dev and test sets. We can see that both models perform well on both sets, with the model trained on the Kidera factors slightly outperforming its naive counter-part in terms of F1.
 
 ```{r echo=FALSE}
 metrics <- read_csv("data/wandb_export_2022-02-18T04_07_23.742+00_00.csv", show_col_types = FALSE)
@@ -297,15 +297,15 @@ prc %>%
   theme(text = element_text(family = "Times"))
 ```
 
-While it is interesting to see MLPs perform this well on a sequence classification task, the approach has considerable implications for when we will try to scale. The weight matrix $W_h$, mapping the hidden units to the output units, has the shape of $C \times F$, where $F = L \times H$. For the models in figure 1., $C = 1000$, $L = 512$ and $H = 256$, meaning $W_h$ contains `r 256 * 512 * 1000` 32-bit floating point numbers, which translates to $\sim 520$ megabytes of memory If we were to keep $F$ constant and increase $C$ (i.e. increase the number of classes) by an order of magnitude, then $W_h$ alone would be $~\sim 5.2$ Gb of RAM.
+While it is interesting to see MLPs perform this well on a sequence classification task, the approach has considerable implications for when we will try to scale. The weight matrix $W_h$, mapping the hidden units to the output units, has the shape of $C \times M$, where $M = L \times H$. For the models in figure 1., $C = 1000$, $L = 512$ and $H = 256$, meaning $W_h$ contains $\sim 1.3 \times 10^{8}$ 32-bit floating point numbers, which translates to $\sim 520$ megabytes of memory. If we were to keep $M$ constant and increase $C$ (i.e. increase the number of classes) by an order of magnitude, then $W_h$ alone would be $~\sim 5.2$ Gb of RAM.
 
 ### Scaling and Class Imbalance
 
-Results from the top 10k classifier highlighted the issue of scaling the MLPs. Token concatenation at the hidden layer became intractable due to the increased number of output classes. Furthemore, increased dataset sizes meant much longer training times and random undersampling to the minority class was also not feasible, as the minority class only had 27 examples.
-In order to avoid overly aggressive undersampling, class sample number was clamped at 250 examples as an upper bound. Loss re-weighting was applied for all classes, as minority class over-sampling would only increase already prohibitive training times. The weighting schemes applied were inverse sample number and inverse effective sample number ($\lambda = 0.99$).
+Results from the top 10k classifier highlighted the issue of scaling the MLPs. Token concatenation at the hidden layer became intractable due to the increased number of output classes. Furthermore, increased dataset sizes lead to much longer training times and random undersampling to the minority class became infeasible, as the minority class only had 27 examples.
+In order to avoid overly aggressive undersampling, the per class sample number was clamped at 250 (upper bound). Loss re-weighting was applied for all classes, as minority class over-sampling would only increase already prohibitive training times. The weighting schemes applied were inverse sample number and inverse effective sample number ($\lambda = 0.99$).
 The model architecture was adapted, such that the sequence tokens were concatenated at the input layer instead of the hidden layer. Thus, the hidden layer dimension was reduced, making the model tractable in terms of memory. However, to avoid a bottleneck in the hidden layer, its dimension was incremented such that $M > C$; however, the ratio being much smaller than before ($M = 2\times10^4$, $C = 1\times10^4$). Learning rate and number of epochs were kept from the previous experiment.
 
-Unsurprisingly, the models performed poorly. From the results, it is clear that there is an underfitting problem, which --- looking at the loss curves --- seems to be in part due to the low number of epochs. However, when training on a Google Colab GPU with a batch size of 128, an epoch can take up to 45 minutes. Along with Google colab's random runtime disconnections, this became infeasible. Increasing or decreasing the learning rate was ineffective at speeding up model fitting and in certain cases caused models to get trapped in local maxima.
+Unsurprisingly, the models performed poorly. From the results, it is clear that there is an underfitting problem, which --- looking at the loss curves --- seems to be in part due to the low number of epochs. However, when training on a Google Colab GPU with a batch size of 128, 4 epochs can take up to 1.5 hours. Combined with Google colab's random runtime disconnections, increasing the number of epochs was deemed infeasible. Increasing or decreasing the learning rate was ineffective at speeding up model fitting and in certain cases caused models to get trapped in local maxima.
 
 ```{r echo=FALSE}
 metrics %>%
@@ -342,8 +342,13 @@ loss %>%
   theme(text = element_text(family = "Times"))
 ```
 
+A deeper network (Transformer encoder with a classification head) was attempted, however training was prohibitively slow. Moreover, model performance was not significantly better when training for the same number of epochs.
 
 ## Future Work
+
+### Increasing Compute
+
+Most issues faced here were ones of compute contsraints (OOM, slow training etc.). As a simple first solution, simply increasing the amount of computing power may yield significantly better results. Increased compute would allow us to train deeper networks with larger batch sizes at increased speed. ProtCNN, for example, is a deep ResNet with 5 residual blocks, each of which containing 2 convolution layers, 2 ReLU non-linearities and 2 batch normalisation layers. Moreover, they trained their network for $5 \times 10^5$ steps, two orders of magnitude greater than the steps performed for the top 10k classifiers.
 
 ### Sequence representation
 
@@ -352,7 +357,12 @@ Moreover, differences in aggregation strategy (i.e. concatenation, pooling), as 
 
 ### Model architecture
 
+Beyond model depth, model architectures with better priors for sequence learning --- principally Transformer-based networks --- would be interesting to investigate. MLPs, while theoretically expressive enough to approximate any arbitrary function, are highly sensitive to translations and permutations of the input features. For example, a class of zinc finger (ZF) domain has a highly characteristic motif of $\mathrm{X}_2-\mathrm{Cys}-\mathrm{X}_{2,4}-\mathrm{Cys}-\mathrm{X}_{12}-\mathrm{His}-\mathrm{X}_{3,4,5}-\mathrm{His}$ (C2H2), where $\mathrm{X}_i$ denotes $i$ number of any amino acid $\mathrm{X}$. The MLP would need to be shown all possible shifts of this domain in the sequence to learn the shift invariance property. Moreover, the varying lengths of arbitrary sequence between the conserved residues means these examples also need to be shown. While convolutional networks can account for the shift equivariance, Transformer self-attention can also capture longer range dependencies.
 
 ### Problem reformulation
+
+Finally, one-vs-all and one-vs-one reformulations of the multi-class classification task can also be attempted. Given ProtCNN's excellent performance, however, it seems unlikely that this will be necessary once larger models with more compute have been tried. Another reformulaton may be the collapse of the families into their superfamilies (clans), to produce a smaller number of classes with more examples in each.
+
+## References
 
 
