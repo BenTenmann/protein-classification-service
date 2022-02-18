@@ -13,9 +13,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction
 
-Protein family classification is the task of assigning a set of family domain IDs to a peptide. A protein domain is a section of the protein's sequence which performs a specific biological function. In this dataset, each example is an isolated domain with its associated family ID / accession number.
+Protein family classification is the task of assigning a family ID to a peptide. In this dataset, each example is an isolated domain with its associated family ID / accession number. A protein domain is a section of the protein's sequence which performs a specific biological function and is defined by its sequential and structural characteristics. Proteins can have any number of domains, each of which can have its own lineage. Different proteins with shared domains either stem from gene duplications followed by divergent evolution, or insertion of tranposable elements or viruses. Hence, proteins sharing domains are likely to be related in some way, classifying them as part of the same family or superfamily (=clan).
 
-A good example for a protein containing multiple domains is the superfamily of G-protein coupled receptors (GPCR), which are a diverse set of cell-surface receptors involved in a variety of cell-signalling tasks. It consists of seven transmembrane domains, connected by three intracellular and three extracellular loops, of which the extracellular loops form the ligand-binding domain. The rhodopsin GPCR family, for example, are found in rod cells in the retina and are involved in light detection.
+A good example of a protein superfamily (SF) is the G-protein coupled receptor (GPCR) SF, which is a diverse set of cell-surface receptors involved in a variety of cell-signalling tasks. It consists of seven transmembrane domains, connected by three intracellular and three extracellular loops, of which the extracellular loops form the ligand-binding domain. The rhodopsin GPCR family, for example, are found in rod cells in the retina and are involved in phototransduction. When light strikes the rhodopsin-bound retinal, the retinal isomerizes, causing a conformational change of the GPCR. This causes a signalling cascade, resulting in the hydrolysis of cyclic guanosine monophosphate (cGMP) into GMP. This, in turn, causes the ligand-gated sodium channels in the rod cell to close, preventing action potentials and hence signalling that light has been detected. In fact, phototransduction in rod cells is a special case in neural signalling, as the absence of signal from the rod cell indicates stimulation.
+
+Protein family classification was classically done by a combination of multiple sequence alignment, Hidden Markov Model (HMM) profiling, structural modelling and exhaustive experimental validation. Recently, deep learning has been applied to this area, setting a new state-of-the-art Principally, ProtCNN [] implements a ResNet-style architecture, trained on sequences of one-hot encodings of the amino acid letters. Authors showed that ProtCNN consistently outperformed BLASTp and HMMer when trying to classify protein families, expecially at low sequence identity. 
 
 ## Dataset Analysis
 
@@ -50,7 +52,7 @@ FILES %>%
 
 To be sure that we have all the data, let's see how many examples we have for each split and how many examples in total.
 
-```{r}
+```{r fig.align='center'}
 df %>%
   group_by(split) %>%
   count() -> tmp
@@ -91,7 +93,7 @@ print(vocab)
 
 The total vocabulary size of the dataset is `r length(vocab)`. As we can see, there are a number of rare amino acids present. 
 
-```{r}
+```{r fig.align='center'}
 tibble(
   lm = all_letters
 ) %>%
@@ -116,7 +118,7 @@ Now that we have validated that dataset is complete, we can look at some summary
 
 In [] the task was family classification from the unaligned amino acid sequences of the protein domains. To do the same, we have to find a salient mapping from the discrete, alphabetic, variable size space to a continuous, numeric and fixed size space. First off, let's look at the distribution of (unaligned) sequence lengths.
 
-```{r}
+```{r fig.align='center'}
 df %>%
   mutate(sequence_length = str_length(sequence)) -> tmp
 
@@ -158,7 +160,7 @@ The variability in sequence length can be addressed in three ways:
 Having investigated the model inputs, we turn our attention now to the model targets. Due to the one-to-one mapping between family ID and family acccession, I use family ID here arbitrarily. 
 Looking at the distribution of abundances for each family, i.e. the number of examples we have for each class, we observe a power-law distribution. This means that we have a low number of high support classes, and a high number of low support classes.
 
-```{r}
+```{r fig.align='center'}
 df %>%
   group_by(split, family_id) %>%
   count() -> tmp
@@ -199,8 +201,158 @@ This imbalance can be addressed in three ways:
 3. **Probelm reformulation**: failing the latter two, the problem can be reformulated. For example, a multi-class classification problem can be restated as a link prediction task, where the target is binary: given example $x_i$ and $x_j$, state the probability that they belong to the same class $C_k$ (edge). Now $C_k$ has $\frac{N_k}{2}(N_k - 1)$ examples, where $N_k$ is the original number of examples.
 
 
-## Method Explanation
+## Methods & Materials
 
-Given the nature of the data and the problem, we need to build a multi-class classifier, which can take sequence data and produce a class label. Hence, there are two primary questions: 1) how to represent the data and 2) how to deal with the class imbalance.
+Given the nature of the data and the problem, we need to build a multi-class classifier, which can take sequence data and produce a class label. Hence, there are three primary questions: 1) how to represent the data; 2) what model architecture to use; and 3) how to deal with the class imbalance.
 
-I first deal with the data representation problem, creating a classifier based on the top $N$ 
+### Sequence Representation
+
+I first deal with the data representation problem, creating a classifier based on the top 1000 most abundant protein families. Like ProtCNN, I initially represent each sequence as a sequence of one-hot encodings corresponding to the amino acid letters. I then repeat the same experiment, representing the amino acids using an index of their physicochemical properties, specifically their Kidera Factors. The Kidera Factors give us a 10-dimensional representation for each of the 20 most frequent amino acids. These factors are 10 components extracted from a total of 188 experimentally determined physicochemical properties and roughly correspond to properties such as hydrophobicity, $\alpha$-helix structure preference and $\beta$-sheet structure preference.
+The data for the classifier was prepared by selecting the top 1000 most abundant families and randomly undersampling them to obtain a uniform distribution over all classes ($N_k = 228$). Sequences were right padded / truncated to a uniform lenght of 512 and unknown (i.e. rare) amino acids were represented as $\mathbf{0}$ (equivalent to a pad token).
+
+### Model Architecture
+
+In terms of model architecture, I primarily explored Multi-layer Perceptrons (MLP). The reason for this choice is that MLPs are computationally efficient, while still being universal function approximators. They are hence a good baseline for many modelling tasks. Other archictectures with better priors for sequence modelling were primarily excluded on grounds of compute performance. Transformers, for example, have become the de facto standard for NLP and much of biological sequence learning in recent years (BERT etc.). However, they are computationally prohibitive given the scope of the project --- in part due to the self-attention mechanism scaling quadratically with sequence length.
+MLPs are defined here as 
+
+$$
+F(x) = W_h \sigma\left(W_i x^\intercal + b_i\right)^\intercal + b_h
+$$
+
+where $\sigma$ is some element-wise non-linear function of $W_i x^\intercal + b_i$, $b_i$ and $b_h$ are the layer biases and $W_i$ and $W_h$ are the weight matrices. The dimensions of $W_i$ and $W_h$ are $H \times K$ and $C \times M$, respectively, where $M = H \times L$ ($L$ is the sequence length). In other words, we concatenate the tokens of the sequence in the hidden layer.
+The non-linear function $\sigma$ here is the leaky regularized linear unit (leaky ReLU), which is a piecewise linear function:
+
+$$
+\sigma(z) = \max(z, \beta z) \\
+z = Wx^\intercal + b
+$$
+
+where $\beta \in \mathbb{R}$ is a hyper-parameter. Notice that the standard ReLU is a special case of the leaky ReLU when $\beta = 0$.
+
+$W$ and $b$ were found by performing gradient-descent using the cross entropy loss $\mathcal{L}$ of $F(x)$:
+
+$$
+\mathcal{L}(\hat{y}, y) =  -y \cdot \log\left(\mathrm{softmax}\left(\hat{y} \right)\right)^\intercal \\
+\mathrm{softmax}(\hat{y}_i) = \frac{\exp(\hat{y}_i)}{\sum_{j = 1}^C \exp(\hat{y}_j)} \\
+\hat{y} = F(x)
+$$
+
+The gradient $\nabla\mathcal{L}$ w.r.t to each parameter $w \in \theta$ ($\theta := \{W_i, W_h\}$) is computed via standard back-propagation and parameters updated using an Adam optimizer with a constant update step-size $\eta = 10^{-5}$.
+
+
+### Scaling and Class Imbalance
+
+Finally, I use the best performing representation to classify the top 10,000 most abundant protein families to investigate scaling properties and class imbalance. I try two loss re-weighting schemes: 1) inverse sample number and inverse effective sample number. Class over-sampling was also considered, however was discarded as it only exacerbated the computational contraints.
+
+Inverse sample number is the simplest loss re-weighting techique and is defined as $p_k = N_k^{-1}$. Inver effective sample number, on the other hand, postulates that as the number of examples increases, the number of effective samples asymptotes. We can intuit this as when a class has many examples, an additional example is unlikely add much more information, as opposed to a class with few examples. The effective number of examples $E_k$ for class $C_k$ is defined as
+
+$$
+E_k = \frac{1 - \lambda^{N_k}}{1 - \lambda} \\
+\lambda = \frac{P - 1}{P} 
+$$
+where $P$ is the total volume of the sample space for class $C_k$. However, since the volume is unkown, $\lambda$ becomes a hyper-parameter with recommended values around $0.9, 0.99, 0.999$ etc.. The weighting scheme, then, is defined as $p_k = \frac{1 - \lambda}{1 - \lambda^{N_k}}$ and effectively works as a smoothing function on the weights, as compared to the standard inverse sample number weighting.
+
+## Results
+
+### Top 1k Classifier
+
+Under certain hyper-parameter settings, classification of the top 1000 protein families becomes trivial --- even for MLP architectures. In the table below, we can see the macro-averaged recall, precision and F1 scores for the one-hot encoding and Kidera Factor based models on dev and test sets. We can see that both models perform well on both sets, with the model trained on the Kidera features slightly outperforming its naive counter-part in terms of F1.
+
+```{r echo=FALSE}
+metrics <- read_csv("data/wandb_export_2022-02-18T04_07_23.742+00_00.csv", show_col_types = FALSE)
+metrics <- metrics %>%
+  filter(State == "finished")
+
+metrics %>%
+  filter(Name %in% c("treasured-silence-15", "fresh-yogurt-12")) %>%
+  mutate(Name = if_else(Name == "treasured-silence-15", "Kidera factors", "one-hot")) %>%
+  select(Name, `validation.macro avg.recall`, `validation.macro avg.precision`, `validation.macro avg.f1-score`, `testing.macro avg.recall`, `testing.macro avg.precision`, `testing.macro avg.f1-score`) %>%
+  rename(`sequence encoding` = Name,
+         `dev recall` = `validation.macro avg.recall`,
+         `dev precision` = `validation.macro avg.precision`,
+         `dev F1 score` = `validation.macro avg.f1-score`,
+         `test recall` = `testing.macro avg.recall`,
+         `test precision` = `testing.macro avg.precision`,
+         `test F1 score` = `testing.macro avg.f1-score`) %>%
+  knitr::kable()
+```
+
+Using macro averaging as the reduction method means that under-represented classes are given a disproportionate weight. This can be informative, where poor performance on low support classes is more pronounced, but can equally yield deceivingly good performance in the converse case. In this case, however, the weighted average and macro average are similar, and hence inspecting the macro average should suffice.
+
+Changing the hyper-parameters of the model slightly can give us insight into why it performs so well: when we change the layer at which we concatenate the sequence tokens from the hidden layer to the input layer, performance depreciates considerably (see below). This is unsurprising, as we reduce the dimension of the hidden layer and thus create a bottleneck before the output layer. Conversely, casting the sequence into a $L \times H$ dimensional space before classification, where $L \times H \gg C$, makes setting the decision planes trivial, as there are many more ways two vectors can be orthogonal than there are classes.
+
+```{r cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center'}
+prc <- read_csv("data/prc.csv", show_col_types = FALSE)
+
+prc %>%
+  slice(seq(1, nrow(.), 100)) %>%
+  ggplot(aes(x = recall, y = precision, color = flatten_first))+
+  geom_line()+
+  labs(
+    title = "Micro-average precision-recall curve for top 1k models",
+    color = "hidden layer bottleneck"
+  )+
+  scale_color_manual(values = c("indianred", "steelblue"))+
+  theme_bw()+
+  theme(text = element_text(family = "Times"))
+```
+
+While it is interesting to see MLPs perform this well on a sequence classification task, the approach has considerable implications for when we will try to scale. The weight matrix $W_h$, mapping the hidden units to the output units, has the shape of $C \times F$, where $F = L \times H$. For the models in figure 1., $C = 1000$, $L = 512$ and $H = 256$, meaning $W_h$ contains `r 256 * 512 * 1000` 32-bit floating point numbers, which translates to $\sim 520$ megabytes of memory If we were to keep $F$ constant and increase $C$ (i.e. increase the number of classes) by an order of magnitude, then $W_h$ alone would be $~\sim 5.2$ Gb of RAM.
+
+### Scaling and Class Imbalance
+
+Results from the top 10k classifier highlighted the issue of scaling the MLPs. Token concatenation at the hidden layer became intractable due to the increased number of output classes. Furthemore, increased dataset sizes meant much longer training times and random undersampling to the minority class was also not feasible, as the minority class only had 27 examples.
+In order to avoid overly aggressive undersampling, class sample number was clamped at 250 examples as an upper bound. Loss re-weighting was applied for all classes, as minority class over-sampling would only increase already prohibitive training times. The weighting schemes applied were inverse sample number and inverse effective sample number ($\lambda = 0.99$).
+The model architecture was adapted, such that the sequence tokens were concatenated at the input layer instead of the hidden layer. Thus, the hidden layer dimension was reduced, making the model tractable in terms of memory. However, to avoid a bottleneck in the hidden layer, its dimension was incremented such that $M > C$; however, the ratio being much smaller than before ($M = 2\times10^4$, $C = 1\times10^4$). Learning rate and number of epochs were kept from the previous experiment.
+
+Unsurprisingly, the models performed poorly. From the results, it is clear that there is an underfitting problem, which --- looking at the loss curves --- seems to be in part due to the low number of epochs. However, when training on a Google Colab GPU with a batch size of 128, an epoch can take up to 45 minutes. Along with Google colab's random runtime disconnections, this became infeasible. Increasing or decreasing the learning rate was ineffective at speeding up model fitting and in certain cases caused models to get trapped in local maxima.
+
+```{r echo=FALSE}
+metrics %>%
+  slice(2:3) %>%
+  mutate(Name = if_else(Name == "earthy-feather-34", "Inverse Effective Sample Number", "Inverse Sample Number")) %>%
+  select(Name, `validation.macro avg.recall`, `validation.macro avg.precision`, `validation.macro avg.f1-score`, `testing.macro avg.recall`, `testing.macro avg.precision`, `testing.macro avg.f1-score`) %>%
+  rename(`sequence encoding` = Name,
+         `dev recall` = `validation.macro avg.recall`,
+         `dev precision` = `validation.macro avg.precision`,
+         `dev F1 score` = `validation.macro avg.f1-score`,
+         `test recall` = `testing.macro avg.recall`,
+         `test precision` = `testing.macro avg.precision`,
+         `test F1 score` = `testing.macro avg.f1-score`) %>%
+  knitr::kable()
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.width=10, fig.height=4}
+loss <- read_csv("data/loss.csv", show_col_types = FALSE)
+
+loss %>%
+  filter(loss != 0) %>%
+  filter(id == "train") %>%
+  ggplot(aes(x = step, y = loss, color = run))+
+  geom_line()+
+  labs(
+    title = "Model training loss over 4 epochs",
+    color = "model"
+  )+
+  scale_color_manual(values = c("darkolivegreen", "steelblue", "indianred"), 
+                     labels = c("Top 1k families + Kidera factors", 
+                                "Top 10k families + Inverse Effective Sample Number",
+                                "Top 10k families + Inverse Sample Number"))+
+  theme_bw()+
+  theme(text = element_text(family = "Times"))
+```
+
+
+## Future Work
+
+### Sequence representation
+
+More sequence representation hyper-parameters could be explored. Previously, TF-IDF and other physicochemical property indices (e.g. $z$-scales) were considered, as well as pre-trained language models such as ProtBERT. 
+Moreover, differences in aggregation strategy (i.e. concatenation, pooling), as well as sub-strategies could be interesting to explore. For example, is concatenation always preferable if feasible or can a permutation invariant pooling function (e.g. mean, max ect.) perform similarly? Also, permutation variant pooling functions, such as recurrent neural networks may be worth investigating. Finally, if a version of BERT is used, the `CLS` token can be used, which will have sequence information embedded due to the dense self-attention.
+
+### Model architecture
+
+
+### Problem reformulation
+
+

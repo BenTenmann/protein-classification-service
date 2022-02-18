@@ -9,3 +9,4 @@ venv/
 *_cache/
 .coverage
 .ssh
+download.sh

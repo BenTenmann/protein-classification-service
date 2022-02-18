@@ -7,3 +7,4 @@ param:
   negative_slope: 0.3
   num_labels: 1000
   dropout: 0.01
+  flatten_first: false
