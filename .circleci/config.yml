@@ -30,6 +30,10 @@ commands:
           condition: << pipeline.git.tag >>
           steps:
             - run:
+                name: login docker
+                command: |
+                  docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+            - run:
                 name: push image
                 command: |
                   TAG=${CIRCLE_TAG/deploy-/}
