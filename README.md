@@ -7,42 +7,35 @@ This service takes an unaligned protein sequence as a query and returns a potent
 
 ## About
 
-A protein family is a group of proteins which share function and evolutionary origin. These similarities are reflected in their sequence similarity, i.e. their conservation in primary structure (amino acid sequence).
+A protein family is a group of proteins which share function and evolutionary origin. These similarities are reflected
+in their sequence similarity, i.e. their conservation in primary structure (amino acid sequence).
 
 ## Running the service
 
-This service assumes `docker` to be installed. To run this service, you first have to build the image:
+Assuming `kubectl` and `helm` are installed (plus a Kubernetes cluster being available), the service can be instantiated
+using:
 
 ```bash
-IMAGE=$(dirname ${PWD})
-TAG=$(${PWD}/.get-tag)
-docker build -t ${IMAGE}:${TAG} .
-```
-
-Then run the image using:
-
-```bash
-docker run --rm --name ${IMAGE} -p 0.0.0.0:7687:9000/tcp ${IMAGE}:${TAG}
+kubectl apply -f <(helm template helm/)
 ```
  
 This will start the Seldon microservice. You can now send post requests to the model to receive a classification, e.g.:
 
 ```bash
-curl -X POST localhost:7687/api/v1.0/predictions \
+# port forward service
+kubectl port-forward svc/`basename $PWD` ${PORT:=7687} &
+
+curl -X POST localhost:${PORT}/api/v1.0/predictions \
      -H 'Content-Type: application/json' \
      -d '{"sequence": "EIKKMISEIDKDGSGTIDFEEFLTMMTA"}'
 ```
 
-
 ## Running the tests
 
 To run the unit tests, create a local Python3.9 environment and run the following:
+
 ```bash
 pip install -r requirements-dev.txt
 python3 -m pytest -v tests --cov=protein_classification
 ```
 
-
-## Reading the report
-
-A link to the pre-compiled HTML report detailing the experiments can be found in `${PWD}/notebooks/README.md`.
