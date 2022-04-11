@@ -45,6 +45,7 @@ jobs:
             VERSION=${YQ_DEFAULT_VERSION:-v4.9.6}
             BINARY=${YQ_DEFAULT_BINARY:-yq_linux_386}
             sudo wget https://github.com/mikefarah/yq/releases/download/${VERSION}/${BINARY} -O /usr/bin/yq
+            sudo chmod +x $_
       - run:
           name: install semantic release dependencies
           command: |
