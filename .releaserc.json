@@ -7,15 +7,18 @@
     "@semantic-release/release-notes-generator",
     "@semantic-release/changelog",
     [
-      "@semantic-release/git",
+      "@semantic-release/exec",
       {
-        "assets": "./CHANGELOG.md"
+        "prepareCmd": ".semantic-release/releaseImage.sh ${nextRelease.version}"
       }
     ],
     [
-      "@semantic-release/exec",
+      "@semantic-release/git",
       {
-        "publishCmd": ".semantic-release/releaseImage.sh ${nextRelease.version}"
+        "assets": [
+          "./CHANGELOG.md",
+          "./helm/values.yaml"
+        ]
       }
     ]
   ],
