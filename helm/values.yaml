@@ -1,0 +1,11 @@
+image:
+  name: protein-classification-service
+  tag: 1.0.2
+modelWeights:
+  registry: gs://protein-classification-service/
+  name: model
+serviceDependencies:
+  configName: mlp
+  logitName: 1k-fam
+  tokenName: kidera-factors
+  modelDir: weights
