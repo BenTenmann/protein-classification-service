@@ -1,7 +1,5 @@
 import pytest
 
-import torch
-
 
 @pytest.fixture
 def mock_read_json(monkeypatch):
@@ -24,11 +22,3 @@ def label_map():
     def _method():
         return {'XX': 0}
     return _method
-
-
-@pytest.fixture
-def mock_source_type(monkeypatch):
-    monkeypatch.setattr(
-        'protein_classification.dataset.ProteinFamilyDataset.source_type',
-        torch.long
-    )
