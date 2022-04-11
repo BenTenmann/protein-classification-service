@@ -18,21 +18,24 @@ commands:
         default: $DEFAULT_DOCKER_REGISTRY
       image:
         type: string
-        default: $CIRCLE_REPO_NAME
+        default: $CIRCLE_PROJECT_REPONAME
     steps:
       - checkout
       - run:
           name: build docker image
           command: |
             docker build -t << parameters.image >> .
-      - run:
-          name: push image
-          command: |
-            TAG=${CIRCLE_TAG/deploy-/}
-            
-            IMAGE=<< parameters.registry >>/<< parameters.image >>:$TAG
-            docker tag << parameters.image >> $IMAGE
-            docker push $IMAGE
+      - when:
+          condition: << pipeline.git.tag >>
+          steps:
+            - run:
+                name: push image
+                command: |
+                  TAG=${CIRCLE_TAG/deploy-/}
+                  
+                  IMAGE=<< parameters.registry >>/<< parameters.image >>:$TAG
+                  docker tag << parameters.image >> $IMAGE
+                  docker push $IMAGE
 
 jobs:
   generate-version:
@@ -86,6 +89,12 @@ workflows:
   version: 2
   build-release:
     jobs:
+      - build-and-push-docker:
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: "main"
       - generate-version:
           filters:
             branches:
@@ -96,9 +105,3 @@ workflows:
               only: /.*/
             branches:
               ignore: "main"
-      - build-and-push-docker:
-          requires:
-            - generate-version
-          filters:
-            branches:
-              only: "main"
