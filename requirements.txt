@@ -4,5 +4,5 @@ srsly==2.4.2
 torch==1.10.2
 tqdm==4.62.3
 pydantic==1.9.0
-seldon-core==1.12.0
-gdown==4.2.1
+seldon-core==1.13.1
+werkzeug==2.0.3
