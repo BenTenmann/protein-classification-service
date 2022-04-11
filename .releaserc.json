@@ -17,7 +17,8 @@
       {
         "assets": [
           "./CHANGELOG.md",
-          "./helm/values.yaml"
+          "./helm/values.yaml",
+          "./helm/Chart.yaml"
         ]
       }
     ]
