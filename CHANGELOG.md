@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.4.0...deploy-1.4.1) (2022-04-11)
+
+
+### Bug Fixes
+
+* **cci:** login docker ([cc54485](https://github.com/BenTenmann/protein-classification-service/commit/cc54485cec010ccb37b3ef433b78cf0f45f55b17))
+
 # [1.4.0](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.3.0...deploy-1.4.0) (2022-04-11)
 
 
