@@ -1,3 +1,17 @@
+# [1.4.0](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.3.0...deploy-1.4.0) (2022-04-11)
+
+
+### Bug Fixes
+
+* **cci:** docker push command condition ([7839f8a](https://github.com/BenTenmann/protein-classification-service/commit/7839f8a654aef2e9c487fbc9acb19fe6e6ec000d))
+* **cci:** setup remote docker ([5b2989d](https://github.com/BenTenmann/protein-classification-service/commit/5b2989d27887f9c5ebd66ca7ecf5a754a9c2be6d))
+* **semrel:** add helm Chart to assets ([05d4a0e](https://github.com/BenTenmann/protein-classification-service/commit/05d4a0e11bdcd94bd220705c7a7b26f86a795d94))
+
+
+### Features
+
+* **helm:** add docker registry ([95fdead](https://github.com/BenTenmann/protein-classification-service/commit/95fdeadcc61c4dca5b70cd074c21741c701641e4))
+
 # [1.3.0](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.2.0...deploy-1.3.0) (2022-04-11)
 
 
