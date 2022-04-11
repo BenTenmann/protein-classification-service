@@ -21,6 +21,7 @@ commands:
         default: $CIRCLE_PROJECT_REPONAME
     steps:
       - checkout
+      - setup_remote_docker
       - run:
           name: build docker image
           command: |
