@@ -1,3 +1,10 @@
+## [1.4.2](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.4.1...deploy-1.4.2) (2022-04-11)
+
+
+### Bug Fixes
+
+* **cci:** re-add needed reqs ([161279c](https://github.com/BenTenmann/protein-classification-service/commit/161279cf75aed1b9eba87b31536dd34d17867224))
+
 ## [1.4.1](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.4.0...deploy-1.4.1) (2022-04-11)
 
 
