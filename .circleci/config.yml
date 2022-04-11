@@ -10,11 +10,41 @@ executors:
     docker:
       - image: circleci/node:14.18
 
+commands:
+  build-and-push-docker:
+    parameters:
+      registry:
+        type: string
+        default: $DEFAULT_DOCKER_REGISTRY
+      image:
+        type: string
+        default: $CIRCLE_REPO_NAME
+    steps:
+      - checkout
+      - run:
+          name: build docker image
+          command: |
+            docker build -t << parameters.image >> .
+      - run:
+          name: push image
+          command: |
+            TAG=${CIRCLE_TAG/deploy-/}
+            
+            IMAGE=<< parameters.registry >>/<< parameters.image >>:$TAG
+            docker tag << parameters.image >> $IMAGE
+            docker push $IMAGE
+
 jobs:
   generate-version:
     executor: node-docker
     steps:
       - checkout
+      - run:
+          name: install yq
+          command: |
+            VERSION=${YQ_DEFAULT_VERSION:-v4.9.6}
+            BINARY=${YQ_DEFAULT_BINARY:-yq_linux_386}
+            sudo wget https://github.com/mikefarah/yq/releases/download/${VERSION}/${BINARY} -O /usr/bin/yq
       - run:
           name: install semantic release dependencies
           command: |
@@ -23,7 +53,7 @@ jobs:
           name: run semantic release
           command: npx semantic-release
 
-  build-and-test:
+  module-test:
     executor: python-3-9
     steps:
       - checkout
@@ -46,6 +76,11 @@ jobs:
       - codecov/upload:
           file: coverage.xml
 
+  build-and-push-docker:
+    executor: python-3-9
+    steps:
+      - build-and-push-docker
+
 workflows:
   version: 2
   build-release:
@@ -54,9 +89,15 @@ workflows:
           filters:
             branches:
               only: "main"
-      - build-and-test:
+      - module-test:
           filters:
             tags:
               only: /.*/
             branches:
               ignore: "main"
+      - build-and-push-docker:
+          requires:
+            - generate-version
+          filters:
+            branches:
+              only: "main"
