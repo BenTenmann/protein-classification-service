@@ -1,3 +1,20 @@
+# [1.3.0](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.2.0...deploy-1.3.0) (2022-04-11)
+
+
+### Bug Fixes
+
+* **docker:** pin werkzeug==2.0.3 to fix seldon dep ([3c4226c](https://github.com/BenTenmann/protein-classification-service/commit/3c4226cbdfaca01b0054173f139d292152f295b0))
+* **docker:** remove env vars + remove model copy ([cfb0375](https://github.com/BenTenmann/protein-classification-service/commit/cfb0375766e142b596e8e463c38193eb1bebe3ee))
+* **semrel:** add exec perm on yq ([95a7de6](https://github.com/BenTenmann/protein-classification-service/commit/95a7de653662e8f13f7ed892dea954303b33b44c))
+* **semrel:** add helm to git + run script b4 semrel ([d14af7e](https://github.com/BenTenmann/protein-classification-service/commit/d14af7e5c6de3d4496daf8807a477d5ae21e63d2))
+
+
+### Features
+
+* **cci:** add docker build + push step ([efc62bb](https://github.com/BenTenmann/protein-classification-service/commit/efc62bbaf5a24e92bcf25bd54161fcb92749fab7))
+* **helm:** add service helm chart ([59318b6](https://github.com/BenTenmann/protein-classification-service/commit/59318b6f2a78ea71cdfb9a4a2e3dc7438ccfc0fb))
+* **semrel:** auto-bump image tags in helm ([41c6017](https://github.com/BenTenmann/protein-classification-service/commit/41c601713a7ac68b5d70b33bbfae09abebe1eedb))
+
 # [1.2.0](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.1.0...deploy-1.2.0) (2022-02-18)
 
 
