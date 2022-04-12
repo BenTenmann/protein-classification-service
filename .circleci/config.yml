@@ -10,38 +10,6 @@ executors:
     docker:
       - image: circleci/node:14.18
 
-commands:
-  build-and-push-docker:
-    parameters:
-      registry:
-        type: string
-        default: $DEFAULT_DOCKER_REGISTRY
-      image:
-        type: string
-        default: $CIRCLE_PROJECT_REPONAME
-    steps:
-      - checkout
-      - setup_remote_docker
-      - run:
-          name: build docker image
-          command: |
-            docker build -t << parameters.image >> .
-      - when:
-          condition: << pipeline.git.tag >>
-          steps:
-            - run:
-                name: login docker
-                command: |
-                  docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-            - run:
-                name: push image
-                command: |
-                  TAG=${CIRCLE_TAG/deploy-/}
-                  
-                  IMAGE=<< parameters.registry >>/<< parameters.image >>:$TAG
-                  docker tag << parameters.image >> $IMAGE
-                  docker push $IMAGE
-
 jobs:
   generate-version:
     executor: node-docker
@@ -85,21 +53,10 @@ jobs:
       - codecov/upload:
           file: coverage.xml
 
-  build-and-push-docker:
-    executor: python-3-9
-    steps:
-      - build-and-push-docker
-
 workflows:
   version: 2
   build-release:
     jobs:
-      - build-and-push-docker:
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: "main"
       - generate-version:
           filters:
             branches:
