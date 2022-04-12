@@ -2,9 +2,11 @@ import math
 
 import torch
 from torch import nn
+from transformers import AutoModelForSequenceClassification
 
 __all__ = [
     'TransformerClassifier',
+    'LanguageModelClassifier',
     'MLP',
     'MLPOneHot'
 ]
@@ -187,6 +189,16 @@ class TransformerClassifier(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self.embed(x)
+        return out
+
+
+class LanguageModelClassifier(nn.Module):
+    def __init__(self, identifier: str, **conf):
+        super(LanguageModelClassifier, self).__init__()
+        self.model = AutoModelForSequenceClassification.from_pretrained(identifier, **conf)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out = self.model(x).logits
         return out
 
 

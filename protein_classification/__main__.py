@@ -5,6 +5,7 @@ import torch
 import srsly
 import wandb
 from torch import nn
+from transformers import AutoTokenizer
 
 from . import model as mdl
 from .constants import DEVICE
@@ -36,13 +37,21 @@ def main():
     model.to(DEVICE)
 
     label_map = srsly.read_json(environ.get('LABEL_MAP'))
-    tokenizer = load_tokenizer(environ.get('TOKEN_MAP'))
+
+    token_map_path = environ.get('TOKEN_MAP')
+    if token_map_path:
+        tokenizer = load_tokenizer(token_map_path)
+    else:
+        if 'tokenizer' not in config:
+            raise ValueError('tokenizer left undefined')
+        identifier = config['tokenizer']['identifier']
+        tokenizer = AutoTokenizer.from_pretrained(identifier)
 
     env = config.get('env', {})
     loader_map = {'tokenizer': tokenizer,
                   'label_map': label_map,
                   'batch_size': env.get('batch_size'),
-                  'max_length': model_param.get('seq_len')}
+                  'max_length': model_param.get('seq_len', 256)}
 
     train_loader = load_dataloader(environ.get('TRAIN_DATA'), **loader_map)
     dev_loader = load_dataloader(environ.get('DEV_DATA'), **loader_map)
@@ -60,7 +69,16 @@ def main():
     optimizer = OptimizerStep(optim)
 
     wandb.login(key=environ.get('WANDB_API_KEY'))
-    wandb.init(entity=environ.get('WANDB_ENTITY'), project=environ.get('WANDB_PROJECT'))
+    wandb.init(
+        entity=environ.get('WANDB_ENTITY'),
+        project=environ.get('WANDB_PROJECT'),
+        config={
+            'model_config': config,
+            'data_config': {'train': environ['TRAIN_DATA'],
+                            'dev': environ['DEV_DATA'],
+                            'test': environ['TEST_DATA']}
+        },
+    )
 
     epochs = env.get('epochs')
     for _ in range(epochs):

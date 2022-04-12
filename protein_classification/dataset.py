@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
+from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
 
 from .constants import DEVICE, TYPES
 
@@ -137,12 +138,23 @@ class ProteinFamilyDataset(Dataset):
         self.tokenizer = tokenizer
         self.label_map = label_map
         self.tokenizer_args = {'padding': 'max_length', 'truncation': True, **tokenizer_args}
+        self.pretrained_tokenizer = issubclass(type(tokenizer), (PreTrainedTokenizer, PreTrainedTokenizerFast))
 
     def __len__(self):
         return len(self.data_source)
 
+    @staticmethod
+    def _space_separate_sequence(sequence: str) -> str:
+        split = list(sequence)
+        out = ' '.join(split)
+        return out
+
     def _tokenize(self, sequence: str) -> List[int or List[float]]:
+        if self.pretrained_tokenizer:
+            sequence = self._space_separate_sequence(sequence)
         out = self.tokenizer(sequence, **self.tokenizer_args)
+        if hasattr(out, 'input_ids'):
+            out = out.input_ids
         return out
 
     def _cast_sequence_to_tensor(self, sequence: str) -> torch.Tensor:

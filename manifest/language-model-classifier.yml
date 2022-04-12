@@ -1,0 +1,14 @@
+model:
+  name: LanguageModelClassifier
+  param:
+    identifier: Rostlab/prot_bert
+    num_labels: 17929
+    classifier_dropout: 0.1
+tokenizer:
+  identifier: Rostlab/prot_bert
+env:
+  batch_size: 32
+  epochs: 40
+optim:
+  lr: 1e-5
+  weight_decay: 0.01
