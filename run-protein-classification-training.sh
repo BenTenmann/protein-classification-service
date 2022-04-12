@@ -28,7 +28,7 @@ export SOURCE_TYPE="LONG"
 export TARGET_TYPE="LONG"
 
 export WANDB_ENTITY=bentenmann
-export WANDB_PROJECT="${PROJECT}-mlp"
+export WANDB_PROJECT="${PROJECT}-development"
 
 if [[ -z ${WANDB_API_KEY} ]]; then
   echo "WARNING: api key not set"
