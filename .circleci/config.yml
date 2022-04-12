@@ -49,9 +49,7 @@ jobs:
       - run:
           name: run unit tests
           command: |
-            python -m pytest -v tests --cov=protein_classification --cov-report xml
-      - codecov/upload:
-          file: coverage.xml
+            python -m pytest -v tests --cov=protein_classification
 
 workflows:
   version: 2
