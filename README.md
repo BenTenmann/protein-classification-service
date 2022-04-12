@@ -12,11 +12,10 @@ in their sequence similarity, i.e. their conservation in primary structure (amin
 
 ## Running the service
 
-Assuming `kubectl` and `helm` are installed (plus a Kubernetes cluster being available), the service can be instantiated
-using:
+Assuming `helm` is installed (plus a Kubernetes cluster being available), the service can be instantiated using:
 
 ```bash
-kubectl apply -f <(helm template helm/)
+helm install `basename $PWD` ./helm
 ```
  
 This will start the Seldon microservice. You can now send post requests to the model to receive a classification, e.g.:
