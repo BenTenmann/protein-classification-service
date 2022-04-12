@@ -193,9 +193,11 @@ class TransformerClassifier(nn.Module):
 
 
 class LanguageModelClassifier(nn.Module):
-    def __init__(self, identifier: str, **conf):
+    def __init__(self, identifier: str, freeze_bert: bool = False, **conf):
         super(LanguageModelClassifier, self).__init__()
         self.model = AutoModelForSequenceClassification.from_pretrained(identifier, **conf)
+        for param in self.model.bert.parameters():
+            param.requires_grad = not freeze_bert
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self.model(x).logits

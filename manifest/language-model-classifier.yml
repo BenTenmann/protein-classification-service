@@ -2,7 +2,8 @@ model:
   name: LanguageModelClassifier
   param:
     identifier: Rostlab/prot_bert
-    num_labels: 17929
+    freeze_bert: true
+    num_labels: 10_000
     classifier_dropout: 0.1
 tokenizer:
   identifier: Rostlab/prot_bert
