@@ -15,7 +15,7 @@ export TRAIN_DATA="${DATA_DIR}"/train-resampled.jsonl
 export DEV_DATA="${DATA_DIR}"/dev.jsonl
 export TEST_DATA="${DATA_DIR}"/test.jsonl
 export LABEL_MAP="${DATA_DIR}"/label-map.json
-#export TOKEN_MAP="${DATA_DIR}"/kd-token-map.json
+export TOKEN_MAP="${DATA_DIR}"/kd-token-map.json
 export SAVE_PATH="${PWD}"/model-weights
 
 if [[ $2 == "weight" ]]; then
