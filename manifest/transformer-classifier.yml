@@ -16,5 +16,5 @@ env:
   batch_size: 512
   epochs: 8
 optim:
-  lr: 2e-5
+  lr: 4e-5
   weight_decay: 0.01
