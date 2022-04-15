@@ -3,17 +3,17 @@ model:
   name: TransformerClassifier
   param:
     n_tokens: 25
-    d_model: 256
+    d_model: 64
     seq_len: 256
     n_head: 8
-    dim_ff: 1024
+    dim_ff: 512
     n_layers: 2
     hidden_dim: 1024
     negative_slope: 0.3
-    num_labels: 15259
-    dropout: 0.01
+    num_labels: 10_000
+    dropout: 0.1
 env:
-  batch_size: 128
+  batch_size: 256
   epochs: 4
 optim:
   lr: 1e-5
