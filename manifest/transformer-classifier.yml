@@ -13,8 +13,8 @@ model:
     num_labels: 10_000
     dropout: 0.1
 env:
-  batch_size: 256
-  epochs: 4
+  batch_size: 512
+  epochs: 8
 optim:
-  lr: 1e-5
+  lr: 2e-5
   weight_decay: 0.01
