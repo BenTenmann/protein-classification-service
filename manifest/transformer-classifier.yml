@@ -5,7 +5,7 @@ model:
     n_tokens: 25
     d_model: 256
     seq_len: 256
-    n_head: 5
+    n_head: 8
     dim_ff: 1024
     n_layers: 2
     hidden_dim: 1024
