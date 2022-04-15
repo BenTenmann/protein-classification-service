@@ -1,14 +1,14 @@
 ---
 model:
-  name: ProteinFamilyClassifier
+  name: TransformerClassifier
   param:
     n_tokens: 25
     d_model: 256
-    seq_len: 512
+    seq_len: 256
     n_head: 5
     dim_ff: 1024
     n_layers: 2
-    hidden_dim: 4096
+    hidden_dim: 1024
     negative_slope: 0.3
     num_labels: 15259
     dropout: 0.01
