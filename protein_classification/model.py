@@ -418,8 +418,12 @@ class ConvolutionClassifier(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         embedding = self.embed(x)
+        (N, L, C) = embedding.size()
+        # the 1d convolution is done over the sequence dimension, so we need to have the sequence dimension as the last
+        # dimension
+        embedding = embedding.view(N, C, L)
         for block in self.residual_blocks:
             embedding = block(embedding)
-        embedding = self.pooling(embedding, dim=-1)
+        embedding = self.pooling(embedding, dim=1)
         out = self.projection(embedding)
         return out
