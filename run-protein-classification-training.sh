@@ -10,7 +10,7 @@ fi
 PROJECT=protein-classification
 DATA_DIR="${PWD}"/data/dump-10k
 
-export CONFIG_MAP="${PWD}"/manifest/transformer-classifier.yml
+export CONFIG_MAP="${PWD}"/manifest/convolution-classifier.yml
 export TRAIN_DATA="${DATA_DIR}"/train-resampled.jsonl
 export DEV_DATA="${DATA_DIR}"/dev.jsonl
 export TEST_DATA="${DATA_DIR}"/test.jsonl
