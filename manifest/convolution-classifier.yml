@@ -16,5 +16,9 @@ env:
   batch_size: 512
   epochs: 40
 optim:
-  lr: 4e-5
+  lr: 1e-4
   weight_decay: 0.01
+lr_scheduler:
+  base_lr: 5e-5
+  max_lr: 1.5e-4
+  cycle_momentum: false

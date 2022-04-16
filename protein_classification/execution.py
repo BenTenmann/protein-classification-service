@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 __all__ = [
     'OptimizerStep',
+    'LRSchedulerStep',
     'training',
     'testing',
     'validation'
@@ -51,10 +52,22 @@ class OptimizerStep:
         self.optim.step()
 
 
+class LRSchedulerStep:
+    def __init__(self, lr_scheduler):
+        if not (hasattr(lr_scheduler, 'step') and callable(lr_scheduler.step)):
+            raise TypeError(f'{lr_scheduler.__class__.__name__} does not have a `step` method')
+        self.lr_scheduler = lr_scheduler
+
+    def __call__(self):
+        self.lr_scheduler.step()
+
+
 def _loop(model: nn.Module,
           dataset: DataLoader,
           loss_fn: Optional[Callable] = lambda *_: None,
           optimizer: Optional[Callable] = lambda _: None,
+          lr_scheduler: Optional[Callable] = lambda: None,
+          step_per_batch: bool = True,
           status: str = 'training'):
     """
     Generic model execution loop. Iterates over a dataloader and creates predictions from a model. Under certain
@@ -101,6 +114,10 @@ def _loop(model: nn.Module,
 
         predictions.extend(prd.tolist())
         targets.extend(y.tolist())
+        if step_per_batch:
+            lr_scheduler()
+    if not step_per_batch:
+        lr_scheduler()
     report = classification_report(targets, predictions, output_dict=True)
     wandb.log({status: {k: report[k] for k in ('macro avg', 'weighted avg', 'accuracy')}})
     return model

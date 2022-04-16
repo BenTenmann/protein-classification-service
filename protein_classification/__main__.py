@@ -11,6 +11,7 @@ from . import model as mdl
 from .constants import DEVICE
 from .execution import (
     OptimizerStep,
+    LRSchedulerStep,
     training,
     testing,
     validation
@@ -68,6 +69,14 @@ def main():
     optim = torch.optim.Adam(model.parameters(), **optim_param)
     optimizer = OptimizerStep(optim)
 
+    lr_scheduler_param = config.get('lr_scheduler')
+    if lr_scheduler_param is None:
+        scheduler = type('StaticLR', (object,), {'step': lambda *args, **kwargs: None})
+    else:
+        scheduler = torch.optim.lr_scheduler.CyclicLR(optim, **lr_scheduler_param)
+    lr_scheduler_step = LRSchedulerStep(scheduler)
+    step_per_batch = config.get('step_per_batch', True)
+
     wandb.login(key=environ.get('WANDB_API_KEY'))
     wandb.init(
         entity=environ.get('WANDB_ENTITY'),
@@ -84,7 +93,7 @@ def main():
     for eps in range(1, epochs + 1):
         print(f'epoch: {eps}/{epochs}')
         model.train()
-        model = training(model, train_loader, loss_fn, optimizer)
+        model = training(model, train_loader, loss_fn, optimizer, lr_scheduler_step, step_per_batch)
         model.eval()
         model = validation(model, dev_loader, loss_fn)
 
