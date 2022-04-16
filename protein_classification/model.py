@@ -393,7 +393,7 @@ class ResidualBlock(nn.Module):
 
 
 class ConvolutionClassifier(nn.Module):
-    _pooling_fn: set = {'max', 'mean'}
+    _pooling_fn: set = {'amax', 'mean'}
 
     def __init__(self,
                  num_embeddings: int,

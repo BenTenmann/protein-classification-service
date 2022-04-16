@@ -11,7 +11,7 @@ model:
       dilation: 2
       padding: same
     num_labels: 10_000
-    pooling: max
+    pooling: amax
 env:
   batch_size: 512
   epochs: 40
