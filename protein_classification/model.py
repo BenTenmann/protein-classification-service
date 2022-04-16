@@ -357,7 +357,12 @@ class MLPOneHot(nn.Module):
 
 
 class ResidualBlock(nn.Module):
-    def __init__(self, input_channels: int, block_channels: int, kernel_size: tuple, dilation: tuple, padding: tuple):
+    def __init__(self,
+                 input_channels: int,
+                 block_channels: int,
+                 kernel_size: tuple,
+                 dilation: tuple,
+                 padding: tuple or str):
         super(ResidualBlock, self).__init__()
         self.batch_norm_1 = nn.BatchNorm1d(input_channels)
         self.relu = nn.ReLU()
