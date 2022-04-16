@@ -406,7 +406,8 @@ class ConvolutionClassifier(nn.Module):
         super(ConvolutionClassifier, self).__init__()
         self.embed = nn.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
         residual_block_def.update({'input_channels': embedding_dim})
-        self.residual_blocks = [ResidualBlock(**residual_block_def) for _ in range(n_residual_blocks)]
+        residual_blocks = [ResidualBlock(**residual_block_def) for _ in range(n_residual_blocks)]
+        self.residual_blocks = nn.Sequential(*residual_blocks)
         if pooling not in self._pooling_fn:
             raise ValueError(f'{repr(pooling)} is not a valid pooling function')
 
@@ -422,8 +423,7 @@ class ConvolutionClassifier(nn.Module):
         # the 1d convolution is done over the sequence dimension, so we need to have the sequence dimension as the last
         # dimension
         embedding = embedding.view(N, C, L)
-        for block in self.residual_blocks:
-            embedding = block(embedding)
+        embedding = self.residual_blocks(embedding)
         embedding = self.pooling(embedding, dim=1)
         out = self.projection(embedding)
         return out
