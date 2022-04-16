@@ -193,9 +193,34 @@ class TransformerClassifier(nn.Module):
 
 
 class LanguageModelClassifier(nn.Module):
-    def __init__(self, identifier: str, freeze_bert: bool = False, **conf):
+    """
+    Language Model classifier (BERT) [1]. Uses pretrained language model from HuggingFace model hub [2] for fine-tuning
+    on classification task.
+
+    References
+    ----------
+    [1] Devlin, J., Chang, M.W., Lee, K. and Toutanova, K., 2018. Bert: Pre-training of deep bidirectional transformers
+        for language understanding. arXiv preprint arXiv:1810.04805.
+    [2] Wolf, T., Debut, L., Sanh, V., Chaumond, J., Delangue, C., Moi, A., Cistac, P., Rault, T., Louf, R., Funtowicz,
+        M. and Davison, J., 2019. Huggingface's transformers: State-of-the-art natural language processing.
+        arXiv preprint arXiv:1910.03771. https://huggingface.co/models
+    """
+    def __init__(self, identifier: str, freeze_bert: bool = False, **kwargs):
+        """
+        Initialize a LanguageModelClassifier object.
+
+        Parameters
+        ----------
+        identifier: str
+            The model hub [2] identifier string for the pre-trained language model.
+        freeze_bert: bool
+            Boolean defining whether to deactivate gradients (i.e. "freeze") the BERT layers. If set to `True`, then
+            only the classification head parameters will be updated. (default=False)
+        kwargs
+            Keyword arguments passed onto `AutoModelForSequenceClassification.from_pretrained`.
+        """
         super(LanguageModelClassifier, self).__init__()
-        self.model = AutoModelForSequenceClassification.from_pretrained(identifier, **conf)
+        self.model = AutoModelForSequenceClassification.from_pretrained(identifier, **kwargs)
         for param in self.model.bert.parameters():
             param.requires_grad = not freeze_bert
 
