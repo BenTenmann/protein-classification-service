@@ -13,7 +13,7 @@ model:
     num_labels: 10_000
     pooling: amax
 env:
-  batch_size: 512
+  batch_size: 1024
   epochs: 40
 optim:
   lr: 1e-3
