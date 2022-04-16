@@ -7,8 +7,8 @@ model:
     n_residual_blocks: 4
     residual_block_def:
       block_channels: 128
-      kernel_size: [3, 3]
-      dilation: [2, 2]
+      kernel_size: 3
+      dilation: 2
       padding: same
     num_labels: 10_000
     pooling: max
