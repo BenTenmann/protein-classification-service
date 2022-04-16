@@ -424,6 +424,6 @@ class ConvolutionClassifier(nn.Module):
         # dimension
         embedding = embedding.view(N, C, L)
         embedding = self.residual_blocks(embedding)
-        embedding = self.pooling(embedding, dim=1)
+        embedding = self.pooling(embedding, dim=-1)
         out = self.projection(embedding)
         return out
