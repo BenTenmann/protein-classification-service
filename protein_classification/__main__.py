@@ -81,7 +81,8 @@ def main():
     )
 
     epochs = env.get('epochs')
-    for _ in range(epochs):
+    for eps in range(1, epochs + 1):
+        print(f'epoch: {eps}/{epochs}')
         model.train()
         model = training(model, train_loader, loss_fn, optimizer)
         model.eval()
