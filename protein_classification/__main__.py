@@ -82,7 +82,9 @@ def main():
 
     epochs = env.get('epochs')
     for _ in range(epochs):
+        model.train()
         model = training(model, train_loader, loss_fn, optimizer)
+        model.eval()
         model = validation(model, dev_loader, loss_fn)
 
     model = testing(model, test_loader)
