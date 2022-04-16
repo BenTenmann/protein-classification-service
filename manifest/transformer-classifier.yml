@@ -7,7 +7,7 @@ model:
     seq_len: 256
     n_head: 8
     dim_ff: 512
-    n_layers: 2
+    n_layers: 5
     hidden_dim: 1024
     negative_slope: 0.3
     num_labels: 10_000
