@@ -204,6 +204,10 @@ class LanguageModelClassifier(nn.Module):
     [2] Wolf, T., Debut, L., Sanh, V., Chaumond, J., Delangue, C., Moi, A., Cistac, P., Rault, T., Louf, R., Funtowicz,
         M. and Davison, J., 2019. Huggingface's transformers: State-of-the-art natural language processing.
         arXiv preprint arXiv:1910.03771. https://huggingface.co/models
+
+    Examples
+    --------
+    >>> model = LanguageModelClassifier('Rostlab/prot_bert')  # downloads pretrained ProtBert model
     """
     def __init__(self, identifier: str, freeze_bert: bool = False, **kwargs):
         """
