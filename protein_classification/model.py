@@ -7,6 +7,7 @@ from transformers import AutoModelForSequenceClassification
 __all__ = [
     'TransformerClassifier',
     'LanguageModelClassifier',
+    'ConvolutionClassifier',
     'MLP',
     'MLPOneHot'
 ]
@@ -352,4 +353,68 @@ class MLPOneHot(nn.Module):
         embedding = self.dropout(self.embed(x))
         act = self.l_relu(embedding)
         out = self.proj(act.view(batch_size, -1))
+        return out
+
+
+class ResidualBlock(nn.Module):
+    def __init__(self, input_channels: int, block_channels: int, kernel_size: tuple, dilation: tuple, padding: tuple):
+        super(ResidualBlock, self).__init__()
+        self.batch_norm_1 = nn.BatchNorm1d(input_channels)
+        self.relu = nn.ReLU()
+        self.dilated_convolution = nn.Conv1d(
+            in_channels=input_channels,
+            out_channels=block_channels,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            padding=padding
+        )
+        self.batch_norm_2 = nn.BatchNorm1d(block_channels)
+        self.bottleneck_convolution = nn.Conv1d(
+            in_channels=block_channels,
+            out_channels=input_channels,
+            kernel_size=kernel_size,
+            padding=padding
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        norm_1 = self.batch_norm_1(x)
+        act_1 = self.relu(norm_1)
+        conv_1 = self.dilated_convolution(act_1)
+        norm_2 = self.batch_norm_2(conv_1)
+        act_2 = self.relu(norm_2)
+        conv_2 = self.bottleneck_convolution(act_2)
+        out = conv_2 + x
+        return out
+
+
+class ConvolutionClassifier(nn.Module):
+    _pooling_fn: set = {'max', 'mean'}
+
+    def __init__(self,
+                 num_embeddings: int,
+                 embedding_dim: int,
+                 n_residual_blocks: int,
+                 residual_block_def: dict,
+                 num_labels: int,
+                 pooling: str = 'max'
+                 ):
+        super(ConvolutionClassifier, self).__init__()
+        self.embed = nn.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
+        residual_block_def.update({'input_channels': embedding_dim})
+        self.residual_blocks = [ResidualBlock(**residual_block_def) for _ in range(n_residual_blocks)]
+        if pooling not in self._pooling_fn:
+            raise ValueError(f'{repr(pooling)} is not a valid pooling function')
+
+        self.pooling = getattr(torch, pooling)
+        self.projection = nn.Linear(
+            in_features=embedding_dim,
+            out_features=num_labels
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        embedding = self.embed(x)
+        for block in self.residual_blocks:
+            embedding = block(embedding)
+        embedding = self.pooling(embedding, dim=-1)
+        out = self.projection(embedding)
         return out
