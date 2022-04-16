@@ -1,0 +1,20 @@
+---
+model:
+  name: ConvolutionClassifier
+  param:
+    num_embeddings: 25
+    embedding_dim: 64
+    n_residual_blocks: 4
+    residual_block_def:
+      block_channels: 128
+      kernel_size: [3, 3]
+      dilation: [2, 2]
+      padding: same
+    num_labels: 10_000
+    pooling: max
+env:
+  batch_size: 512
+  epochs: 40
+optim:
+  lr: 4e-5
+  weight_decay: 0.01
