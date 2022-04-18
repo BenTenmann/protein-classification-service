@@ -55,13 +55,13 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: password
-                  name: bentenmann-wandb
+                  name: {{ .Values.serviceDependencies.wandbSecret }}
                   optional: false
             - name: WANDB_ENTITY
               valueFrom:
                 secretKeyRef:
                   key: username
-                  name: bentenmann-wandb
+                  name: {{ .Values.serviceDependencies.wandbSecret }}
                   optional: false
           volumeMounts:
             - mountPath: {{ .Values.serviceDependencies.modelDir }}

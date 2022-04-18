@@ -8,6 +8,7 @@ serviceDependencies:
     TEST_DATA: test.jsonl
     LABEL_MAP: label-map.json
     TOKEN_MAP: oh-token-map.json
+  wandbSecret: bentenmann-wandb
 image:
   registry:
   name: protein-classification-development
