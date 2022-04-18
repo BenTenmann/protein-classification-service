@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    app: {{ .Chart.Name }}
+spec:
+  selector:
+    app: {{ .Chart.Name }}
+  ports:
+    - port: 5000
+      name: rest
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    app: {{ .Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      name: {{ .Chart.Name }}
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      volumes:
+        - name: model-weights
+          hostPath:
+            path: {{ .Values.serviceDependencies.modelDir }}
+        - name: data
+          hostPath:
+            path: {{ .Values.serviceDependencies.dataDir }}
+      containers:
+        - name: model-training
+          image: {{ .Values.image.registry }}{{ .Values.image.name }}:{{ .Values.image.tag }}
+          imagePullPolicy: IfNotPresent
+          env:
+            {{- range $name, $value := .Values.serviceEnvironment }}
+            - name: {{ $name }}
+              value: {{ $value }}
+            {{- end }}
+            {{- range $name, $value := .Values.serviceDependencies.dataComponents }}
+            - name: {{ $name }}
+              value: {{ $.Values.serviceDependencies.dataDir }}/{{ $value }}
+            {{- end }}
+            - name: SAVE_PATH
+              value: {{ .Values.serviceDependencies.modelDir }}
+            - name: WANDB_PROJECT
+              value: {{ .Chart.Name }}
+            - name: WANDB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: bentenmann-wandb
+                  optional: false
+            - name: WANDB_ENTITY
+              valueFrom:
+                secretKeyRef:
+                  key: username
+                  name: bentenmann-wandb
+                  optional: false
+          volumeMounts:
+            - mountPath: {{ .Values.serviceDependencies.modelDir }}
+              name: model-weights
+            - mountPath: {{ .Values.serviceDependencies.dataDir }}
+              name: data
+{{/*          resources:*/}}
+{{/*            limits:*/}}
+{{/*              nvidia.com/gpu: 1*/}}
+          ports:
+            - containerPort: 5000
+              name: rest
+      initContainers:
+        - name: pull-data
+          image: google/cloud-sdk:380.0.0-slim
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              echo pulling data
+
+              gsutil cp $GCS_URI .
+              tar -xvf `basename $GCS_URI` -C $MOUNT --strip-components 1
+
+              echo done
+          env:
+            - name: GCS_URI
+              value: {{ .Values.serviceDependencies.dataUri }}
+            - name: MOUNT
+              value: {{ .Values.serviceDependencies.dataDir }}
+          volumeMounts:
+            - mountPath: {{ .Values.serviceDependencies.dataDir }}
+              name: data

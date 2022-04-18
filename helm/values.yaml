@@ -1,0 +1,19 @@
+serviceDependencies:
+  modelDir: /model-weights
+  dataDir: /data
+  dataUri: gs://protein-classification-service/dump-10k.tar.gz
+  dataComponents:
+    TRAIN_DATA: train-resampled.jsonl
+    DEV_DATA: dev.jsonl
+    TEST_DATA: test.jsonl
+    LABEL_MAP: label-map.json
+    TOKEN_MAP: oh-token-map.json
+image:
+  registry:
+  name: protein-classification-development
+  tag: 1.4.13
+serviceEnvironment:
+  SOURCE_COLUMN: sequence
+  TARGET_COLUMN: family_accession
+  SOURCE_TYPE: LONG
+  TARGET_TYPE: LONG

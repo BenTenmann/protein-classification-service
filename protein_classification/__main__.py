@@ -23,7 +23,7 @@ from .utils import (
 )
 
 
-def main():
+def main() -> Path:
     """
     Entrypoint for model training and benchmarking script, accessed via the command line. Refer to `__init__.py` for
     variable definitions.
@@ -98,9 +98,10 @@ def main():
         model = validation(model, dev_loader, loss_fn)
 
     model = testing(model, test_loader)
-    output_path = Path(environ.get('SAVE_PATH'))
+    output_path = Path(environ.get('SAVE_PATH')) / f'{now()}.bin'
+    torch.save(model.state_dict(), output_path)
 
-    torch.save(model.state_dict(), output_path / f'{now()}.bin')
+    return output_path
 
 
 if __name__ == '__main__':
