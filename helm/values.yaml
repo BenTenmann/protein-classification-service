@@ -10,9 +10,9 @@ serviceDependencies:
     TOKEN_MAP: oh-token-map.json
   wandbSecret: bentenmann-wandb
 image:
-  registry:
+  registry: docker.io/btenmann/
   name: protein-classification-development
-  tag: 1.4.14
+  tag: latest
 serviceEnvironment:
   SOURCE_COLUMN: sequence
   TARGET_COLUMN: family_accession
