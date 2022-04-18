@@ -23,13 +23,15 @@ from .utils import (
 )
 
 
-def main() -> Path:
+def main(config: dict = None) -> Path:
     """
     Entrypoint for model training and benchmarking script, accessed via the command line. Refer to `__init__.py` for
     variable definitions.
     """
-    config_path = Path(environ.get('CONFIG_MAP'))
-    config = srsly.read_yaml(config_path)
+    if config is None:
+        path = environ['CONFIG_MAP']
+        config_path = Path(path)
+        config = srsly.read_yaml(config_path)
 
     model_conf = config.get('model', {})
     model_param = model_conf.get('param', {})
@@ -37,7 +39,8 @@ def main() -> Path:
     model = getattr(mdl, model_conf.get('name'))(**model_param)
     model.to(DEVICE)
 
-    label_map = srsly.read_json(environ.get('LABEL_MAP'))
+    label_map_path = environ['LABEL_MAP']
+    label_map = srsly.read_json(label_map_path)
 
     token_map_path = environ.get('TOKEN_MAP')
     if token_map_path:
