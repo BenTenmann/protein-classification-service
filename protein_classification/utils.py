@@ -1,7 +1,9 @@
+import os
 import random
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import srsly
 import torch
@@ -20,7 +22,7 @@ __all__ = [
 ]
 
 
-def set_seed() -> None:
+def set_seed(seed: int = 42) -> None:
     """
     Set the seed of the system.
 
@@ -28,8 +30,17 @@ def set_seed() -> None:
     -------
     None
     """
-    random.seed(42)
-    torch.manual_seed(42)
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2 ** 32
+    random.seed(worker_seed)
+    np.random.seed(worker_seed)
 
 
 def load_dataloader(path: Path or str,
@@ -66,9 +77,15 @@ def load_dataloader(path: Path or str,
     """
     lines = srsly.read_jsonl(path)
     data_frame = pd.DataFrame(lines)
+    generator = torch.Generator()
+    generator.manual_seed(42)
 
     dataset = ProteinFamilyDataset(data_frame, tokenizer, label_map, **tokenizer_args)
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    loader = DataLoader(dataset,
+                        batch_size=batch_size,
+                        shuffle=True,
+                        worker_init_fn=seed_worker,
+                        generator=generator)
     return loader
 
 

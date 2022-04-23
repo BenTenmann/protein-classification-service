@@ -20,7 +20,8 @@ from .execution import (
 from .utils import (
     load_dataloader,
     load_tokenizer,
-    now
+    now,
+    set_seed
 )
 
 
@@ -29,6 +30,7 @@ def main(config: dict = None) -> Path:
     Entrypoint for model training and benchmarking script, accessed via the command line. Refer to `__init__.py` for
     variable definitions.
     """
+    set_seed()
     if config is None:
         path = environ['CONFIG_MAP']
         config_path = Path(path)
