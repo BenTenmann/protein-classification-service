@@ -1,3 +1,4 @@
+import re
 from os import environ
 from pathlib import Path
 
@@ -92,19 +93,31 @@ def main(config: dict = None) -> Path:
         },
     )
 
+    model_dir = Path(environ.get('SAVE_PATH')) / f'{model_conf.get("name")}-{now()}'
+    model_dir.mkdir(parents=True, exist_ok=True)
+
+    resume_from = environ.get('RESUME_FROM')
+    if resume_from:
+        prev_epochs = re.findall(r"epoch-([0-9]+)\.bin", resume_from)[0]
+        prev_epochs = int(prev_epochs)
+        state_dict = torch.load(resume_from, map_location=DEVICE)
+        model.load_state_dict(state_dict)
+    else:
+        prev_epochs = 0
+
     epochs = env.get('epochs')
-    for eps in range(1, epochs + 1):
+    for eps in range(1 + prev_epochs, epochs + 1):
         print(f'epoch: {eps}/{epochs}')
         model.train()
         model = training(model, train_loader, loss_fn, optimizer, lr_scheduler_step, step_per_batch)
         model.eval()
         model = validation(model, dev_loader, loss_fn)
 
-    model = testing(model, test_loader)
-    output_path = Path(environ.get('SAVE_PATH')) / f'{now()}.bin'
-    torch.save(model.state_dict(), output_path)
+        output_path = model_dir / f'epoch-{eps}.bin'
+        torch.save(model.state_dict(), output_path)
 
-    return output_path
+    testing(model, test_loader)
+    return model_dir
 
 
 if __name__ == '__main__':
