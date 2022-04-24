@@ -17,8 +17,8 @@ env:
   epochs: 80
 optim:
   lr: 1e-2
-  weight_decay: 0.01
+  weight_decay: 1e-5
 lr_scheduler:
-  base_lr: 5e-5
-  max_lr: 1.5e-4
+  base_lr: 1e-5
+  max_lr: 1e-4
   cycle_momentum: false
