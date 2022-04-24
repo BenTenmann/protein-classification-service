@@ -1,0 +1,23 @@
+macro_avg_f1:
+  train: 0.90
+  dev: 0.77
+  test: 0.77
+wandb:
+  run_path_ids:
+    - 1sshyo10
+    - 1ma58t2x
+    - 14luj3nl
+    - 15mbz57z
+    - 2v9ehhgg
+    - 3l4yetd2
+description: |-
+  Trained ResNet on the top 10,000 protein families in the PFAM seed random-split dataset. Training was slow (80 epochs).
+  Due to Google colab, the training was continuously restarted from different points. The learning rate was adjusted
+  (reduced) manually. Also, weight decay was reduced. For reference, the final weights were derived from the following
+  runs (paths):
+  1. 1sshyo10 (up to epoch 18)
+  2. 1ma58t2x
+  3. 14luj3nl
+  4. 15mbz57z
+  5. 2v9ehhgg
+  6. 3l4yetd2
