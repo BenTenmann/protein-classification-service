@@ -52,7 +52,7 @@ class PositionalEncoding(nn.Module):
     def __init__(self, d_model: int, max_len: int):
         super(PositionalEncoding, self).__init__()
         position = torch.arange(max_len).unsqueeze(0).unsqueeze(-1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(max_len * 2) / d_model))
         pe = torch.zeros(1, max_len, d_model)
         pe[0, :, 0::2] = torch.sin(position * div_term)
         pe[0, :, 1::2] = torch.cos(position * div_term)
