@@ -5,10 +5,11 @@ model:
     n_tokens: 25
     d_model: 64
     seq_len: 256
-    n_head: 8
+    n_head: 4
     dim_ff: 512
     n_layers: 3
     num_labels: 10_000
+    dropout: 0.01
     pooling_fn: amax
 env:
   batch_size: 512

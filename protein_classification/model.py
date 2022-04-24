@@ -82,6 +82,7 @@ class TransformerClassifier(nn.Module):
                  dim_ff: int,
                  n_layers: int,
                  num_labels: int,
+                 dropout: float,
                  pooling_fn: str):
         """
         Initialise a TranformerClassifier object.
@@ -104,6 +105,7 @@ class TransformerClassifier(nn.Module):
             The number of output classes.
         """
         super(TransformerClassifier, self).__init__()
+        self.d_model = d_model
         self.embed_layer = nn.Embedding(num_embeddings=n_tokens, embedding_dim=d_model)
         self.pos_enc = PositionalEncoding(d_model, max_len=seq_len)
         self.transformer = nn.TransformerEncoder(
@@ -111,7 +113,8 @@ class TransformerClassifier(nn.Module):
                 d_model=d_model,
                 nhead=n_head,
                 dim_feedforward=dim_ff,
-                batch_first=True
+                batch_first=True,
+                dropout=dropout
             ),
             num_layers=n_layers
         )
@@ -120,10 +123,17 @@ class TransformerClassifier(nn.Module):
 
         self.pooling = getattr(torch, pooling_fn)
         self.projection = nn.Linear(in_features=d_model, out_features=num_labels)
+        self.init_weights()
+
+    def init_weights(self):
+        init_range = 0.1
+        self.embed_layer.weight.data.uniform_(-init_range, init_range)
+        self.projection.weight.data.uniform_(-init_range, init_range)
+        self.projection.bias.data.zero_()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         mask = (x == 0)
-        embedding = self.embed_layer(x)
+        embedding = self.embed_layer(x) * math.sqrt(self.d_model)
         positional_encoding = self.pos_enc(embedding)
         trf_embedding = self.transformer(positional_encoding, src_key_padding_mask=mask)
         pooled_representation = self.pooling(trf_embedding, dim=1)
