@@ -7,11 +7,9 @@ model:
     seq_len: 256
     n_head: 8
     dim_ff: 512
-    n_layers: 5
-    hidden_dim: 64
-    negative_slope: 0.3
+    n_layers: 3
     num_labels: 10_000
-    dropout: 0.1
+    pooling_fn: amax
 env:
   batch_size: 512
   epochs: 8

@@ -49,10 +49,8 @@ class PositionalEncoding(nn.Module):
     [1] Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.N., Kaiser, Ł. and Polosukhin, I.,
         2017. Attention is all you need. Advances in neural information processing systems, 30.
     """
-    def __init__(self, d_model: int, dropout: float, max_len: int):
+    def __init__(self, d_model: int, max_len: int):
         super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(dropout)
-
         position = torch.arange(max_len).unsqueeze(0).unsqueeze(-1)
         div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
         pe = torch.zeros(1, max_len, d_model)
@@ -62,7 +60,7 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x + self.pe
-        return self.dropout(x)
+        return x
 
 
 class TransformerClassifier(nn.Module):
@@ -74,6 +72,8 @@ class TransformerClassifier(nn.Module):
     [1] Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.N., Kaiser, Ł. and Polosukhin, I.,
         2017. Attention is all you need. Advances in neural information processing systems, 30.
     """
+    _pooling_fn = {'amax', 'mean'}
+
     def __init__(self,
                  n_tokens: int,
                  d_model: int,
@@ -81,10 +81,8 @@ class TransformerClassifier(nn.Module):
                  n_head: int,
                  dim_ff: int,
                  n_layers: int,
-                 hidden_dim: int,
-                 negative_slope: float,
                  num_labels: int,
-                 dropout: float):
+                 pooling_fn: str):
         """
         Initialise a TranformerClassifier object.
 
@@ -102,19 +100,13 @@ class TransformerClassifier(nn.Module):
             Feedforward dimension in each Transformer encoder layer.
         n_layers: int
             The number of Transformer encoder layers.
-        hidden_dim: int
-            The dimension of the hidden layer of the classification head.
-        negative_slope: float
-            The negative slope of the leaky ReL unit in the classification head.
         num_labels: int
             The number of output classes.
-        dropout: float
-            The unit dropout rate.
         """
         super(TransformerClassifier, self).__init__()
         self.embed_layer = nn.Embedding(num_embeddings=n_tokens, embedding_dim=d_model)
-        self.pos_enc = PositionalEncoding(d_model, dropout, max_len=seq_len)
-        self.encoder = nn.TransformerEncoder(
+        self.pos_enc = PositionalEncoding(d_model, max_len=seq_len)
+        self.transformer = nn.TransformerEncoder(
             encoder_layer=nn.TransformerEncoderLayer(
                 d_model=d_model,
                 nhead=n_head,
@@ -123,75 +115,20 @@ class TransformerClassifier(nn.Module):
             ),
             num_layers=n_layers
         )
-        self.layer_norm = nn.LayerNorm(d_model)
-        self.dropout = nn.Dropout(dropout)
-        self.proj_1 = nn.Linear(in_features=d_model, out_features=hidden_dim)
-        self.l_relu = nn.LeakyReLU(negative_slope)
-        self.proj_2 = nn.Linear(in_features=hidden_dim, out_features=num_labels)
+        if pooling_fn not in self._pooling_fn:
+            raise ValueError(f'{pooling_fn} is not a valid pooling function')
 
-    def project(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Classification head MLP with leaky ReLU non-linearity.
-
-        Parameters
-        ----------
-        x: torch.Tensor
-            Input tensor of shape :math:`(N, L, H)`, where :math:`L` is the sequence length and :math:`H` is the feature
-            dimension.
-
-        Returns
-        -------
-        out: torch.Tensor
-            The unnormalised class scores of shape :math:`(N, C)`, where :math:`C` is the number of classes.
-        """
-        proj = self.dropout(self.proj_1(x))
-        act = self.l_relu(proj)
-        out = self.proj_2(act)
-        return out
-
-    def encode(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        The sequence encoding layer, i.e. the Transformer.
-
-        Parameters
-        ----------
-        x: torch.Tensor
-            The input tensor of shape :math:`(N, L)`, where :math:`L` is the sequence length.
-
-        Returns
-        -------
-        out: torch.Tensor
-            The encoded sequence of shape :math:`(N, L, H)`, where :math:`H` is the feature dimension.
-        """
-        mask = (x == 0)
-        x = self.embed_layer(x)
-        pos_enc = self.pos_enc(x)
-        encoding = self.encoder(pos_enc, src_key_padding_mask=mask)
-        out = self.layer_norm(encoding + x)
-        return out
-
-    def embed(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Encoder and classification head. The encoder output is mean-pooled along the sequence dimension.
-
-        Parameters
-        ----------
-        x: torch.Tensor
-            The input tensor of shape :math:`(N, L)`, where :math:`L` is the sequence length.
-
-        Returns
-        -------
-        out: torch.Tensor
-            The unnormalised class scores of shape :math:`(N, C)`, where :math:`C` is the number of classes.
-        """
-        encoding = self.encode(x)
-        pooled = torch.amax(encoding, dim=1)
-        out = self.project(pooled)
-        return out
+        self.pooling = getattr(torch, pooling_fn)
+        self.projection = nn.Linear(in_features=d_model, out_features=num_labels)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        out = self.embed(x)
-        return out
+        mask = (x == 0)
+        embedding = self.embed_layer(x)
+        positional_encoding = self.pos_enc(embedding)
+        trf_embedding = self.transformer(positional_encoding, src_key_padding_mask=mask)
+        pooled_representation = self.pooling(trf_embedding, dim=1)
+        logits = self.projection(pooled_representation)
+        return logits
 
 
 class LanguageModelClassifier(nn.Module):
