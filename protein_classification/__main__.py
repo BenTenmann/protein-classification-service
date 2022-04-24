@@ -71,6 +71,15 @@ def main(config: dict = None) -> Path:
     else:
         loss_fn = nn.CrossEntropyLoss()
 
+    resume_from = environ.get('RESUME_FROM')
+    if resume_from:
+        prev_epochs = re.findall(r"epoch-([0-9]+)\.bin", resume_from)[0]
+        prev_epochs = int(prev_epochs)
+        state_dict = torch.load(resume_from, map_location=DEVICE)
+        model.load_state_dict(state_dict)
+    else:
+        prev_epochs = 0
+
     optim_param = config.get('optim', {'lr': 1e-3})
     optim = torch.optim.Adam(model.parameters(), **optim_param)
     optimizer = OptimizerStep(optim)
@@ -97,15 +106,6 @@ def main(config: dict = None) -> Path:
 
     model_dir = Path(environ.get('SAVE_PATH')) / f'{model_conf.get("name")}-{now()}'
     model_dir.mkdir(parents=True, exist_ok=True)
-
-    resume_from = environ.get('RESUME_FROM')
-    if resume_from:
-        prev_epochs = re.findall(r"epoch-([0-9]+)\.bin", resume_from)[0]
-        prev_epochs = int(prev_epochs)
-        state_dict = torch.load(resume_from, map_location=DEVICE)
-        model.load_state_dict(state_dict)
-    else:
-        prev_epochs = 0
 
     epochs = env.get('epochs')
     for eps in range(1 + prev_epochs, epochs + 1):
