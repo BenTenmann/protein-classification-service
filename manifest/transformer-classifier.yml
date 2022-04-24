@@ -8,7 +8,7 @@ model:
     n_head: 8
     dim_ff: 512
     n_layers: 5
-    hidden_dim: 1024
+    hidden_dim: 64
     negative_slope: 0.3
     num_labels: 10_000
     dropout: 0.1
@@ -16,5 +16,9 @@ env:
   batch_size: 512
   epochs: 8
 optim:
-  lr: 4e-5
+  lr: 1e-3
   weight_decay: 0.01
+lr_scheduler:
+  base_lr: 5e-4
+  max_lr: 1.5e-3
+  cycle_momentum: false

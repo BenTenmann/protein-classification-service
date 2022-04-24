@@ -163,9 +163,10 @@ class TransformerClassifier(nn.Module):
         out: torch.Tensor
             The encoded sequence of shape :math:`(N, L, H)`, where :math:`H` is the feature dimension.
         """
+        mask = (x == 0)
         x = self.embed_layer(x)
         pos_enc = self.pos_enc(x)
-        encoding = self.encoder(pos_enc)
+        encoding = self.encoder(pos_enc, src_key_padding_mask=mask)
         out = self.layer_norm(encoding + x)
         return out
 
@@ -184,7 +185,7 @@ class TransformerClassifier(nn.Module):
             The unnormalised class scores of shape :math:`(N, C)`, where :math:`C` is the number of classes.
         """
         encoding = self.encode(x)
-        pooled = encoding.mean(dim=1)
+        pooled = torch.amax(encoding, dim=1)
         out = self.project(pooled)
         return out
 
