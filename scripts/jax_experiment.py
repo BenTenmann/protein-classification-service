@@ -33,8 +33,8 @@ MODEL_CONF = dict(
     num_embeddings=NUM_TOKENS,
     embedding_dim=32,
     residual_block_def={
-        'input_features': 32,
-        'block_features': 64,
+        'input_features': 64,
+        'block_features': 128,
         'kernel_size': (3,),
         'dilation': 2,
         'padding': 'same'
