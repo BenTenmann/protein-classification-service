@@ -67,7 +67,7 @@ def get_datasets() -> dict:
             'source': SOURCE_COLUMN,
             'target': TARGET_COLUMN
         }[file_path.stem]
-        datasets[split][column] = data_array[:1024]
+        datasets[split][column] = data_array
     return datasets
 
 
