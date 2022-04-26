@@ -21,7 +21,7 @@ DATA_DIR = os.environ.get('DATA_DIR')
 OUTPUT_DIR = os.environ.get('OUTPUT_DIR')
 
 DATA_FILES = [
-    ('train-resampled.jsonl', 'train'),
+    ('train.jsonl', 'train'),
     ('dev.jsonl', 'dev'),
     ('test.jsonl', 'test')
 ]
