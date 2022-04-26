@@ -67,7 +67,7 @@ def get_datasets() -> dict:
             'source': SOURCE_COLUMN,
             'target': TARGET_COLUMN
         }[file_path.stem]
-        datasets[split][column] = data_array
+        datasets[split][column] = data_array[:1024]
     return datasets
 
 
@@ -84,6 +84,15 @@ def compute_metrics(*, logits, labels):
         'accuracy': accuracy,
     }
     return metrics
+
+
+def get_batch_indices(rng: jnp.ndarray, dataset_size: int, batch_size: int) -> jnp.ndarray:
+    steps_per_epoch = dataset_size // batch_size
+
+    perms = jax.random.permutation(rng, dataset_size)
+    perms = perms[:steps_per_epoch * batch_size]  # skip incomplete batch
+    perms = perms.reshape((steps_per_epoch, batch_size))
+    return perms
 
 
 @jax.jit
@@ -110,11 +119,7 @@ def train_epoch(state: train_state.TrainState,
                 epoch: int,
                 rng: jnp.ndarray) -> tuple:
     train_ds_size = len(train_ds[SOURCE_COLUMN])
-    steps_per_epoch = train_ds_size // batch_size
-
-    perms = jax.random.permutation(rng, train_ds_size)
-    perms = perms[:steps_per_epoch * batch_size]  # skip incomplete batch
-    perms = perms.reshape((steps_per_epoch, batch_size))
+    perms = get_batch_indices(rng, train_ds_size, batch_size)
     batch_metrics = []
     predictions, targets = [], []
     for perm in tqdm(perms):
@@ -155,13 +160,23 @@ def eval_step(params, batch_stats, batch):
     return loss, class_labels
 
 
-def eval_model(params, batch_stats: dict, test_ds: Dict[str, jnp.ndarray]):
-    loss, class_labels = eval_step(params, batch_stats, test_ds)
-    src = jax.device_get(class_labels)
-    tgt = jax.device_get(test_ds[TARGET_COLUMN])
-    report = classification_report(tgt, src, output_dict=True)
-    loss = jax.device_get(loss)
-    return {**report, 'loss': loss.item()}
+def eval_model(params, batch_stats: dict, test_ds: Dict[str, jnp.ndarray], batch_size: int, rng: jnp.ndarray):
+    test_ds_size = len(test_ds[SOURCE_COLUMN])
+    perms = get_batch_indices(rng, test_ds_size, batch_size)
+    predictions, targets = [], []
+    total_loss = 0
+    for perm in tqdm(perms):
+        batch = {k: v[perm, ...] for k, v in test_ds.items()}
+        loss, class_labels = eval_step(params, batch_stats, batch)
+        src = jax.device_get(class_labels)
+        tgt = jax.device_get(batch[TARGET_COLUMN])
+        predictions.append(src)
+        targets.append(tgt)
+        total_loss += jax.device_get(loss).item()
+    predictions = np.concatenate(predictions)
+    targets = np.concatenate(targets)
+    report = classification_report(targets, predictions, output_dict=True)
+    return {**report, 'loss': total_loss / len(perms)}
 
 
 class ResidualBlock(nn.Module):
@@ -240,20 +255,26 @@ def main():
             rng=input_rng
         )
         # Evaluate on the test set after each training epoch
+        rng, input_rng = jax.random.split(rng)
         report = eval_model(params=train_state_.params,
                             batch_stats=batch_stats,
-                            test_ds=datasets['dev'])
-        wandb.log({'dev': {key: report[key] for key in ('macro avg', 'weighted avg', 'accuracy')}})
+                            test_ds=datasets['dev'],
+                            batch_size=BATCH_SIZE,
+                            rng=input_rng)
+        wandb.log({'dev': {key: report[key] for key in ('macro avg', 'weighted avg', 'accuracy', 'loss')}})
         print('dev epoch: %d, loss: %.2f, accuracy: %.2f' % (
             epoch, report['loss'], report['accuracy'] * 100))
         with (model_dir / f'epoch-{epoch}.flx').open(mode='wb') as file:
             byte_str = serialization.to_bytes({'params': train_state_.params, **batch_stats})
             file.write(byte_str)
 
+    _, input_rng = jax.random.split(rng)
     report = eval_model(params=train_state_.params,
                         batch_stats=batch_stats,
-                        test_ds=datasets['test'])
-    wandb.log({'test': {key: report[key] for key in ('macro avg', 'weighted avg', 'accuracy')}})
+                        test_ds=datasets['test'],
+                        batch_size=BATCH_SIZE,
+                        rng=input_rng)
+    wandb.log({'test': {key: report[key] for key in ('macro avg', 'weighted avg', 'accuracy', 'loss')}})
     print('test results: loss: %.2f, accuracy: %.2f' % (
         report['loss'], report['accuracy'] * 100))
 
