@@ -248,7 +248,7 @@ def main():
     batch_stats = {}
     if RESUME_FROM:
         params, batch_stats = load_checkpoint(RESUME_FROM, variables)
-        eps = re.findall(r"epcoh-([0-9]+)\.flx", RESUME_FROM)[0]
+        eps = re.findall(r"epoch-([0-9]+)\.flx", RESUME_FROM)[0]
         prev_epoch = int(eps)
     else:
         prev_epoch = 0
