@@ -18,6 +18,7 @@ from tqdm import tqdm
 DATA_DIR = os.environ.get('DATA_DIR')
 MODEL_DIR = os.environ.get('MODEL_DIR')
 RESUME_FROM = os.environ.get('RESUME_FROM')
+WANDB_ENTITY = os.environ.get('WANDB_ENTITY', 'bentenmann')
 WANDB_PROJECT_NAME = os.environ.get('WANDB_PROJECT_NAME', 'protein-classification-development')
 
 DATA_FILES = ['source.npy', 'target.npy']
@@ -29,16 +30,17 @@ SEQUENCE_LENGTH = 256
 NUM_TOKENS = 25
 NUM_CLASSES = 10_000
 LEARNING_RATE = 1e-4
+WEIGHT_DECAY = 5e-5
 BATCH_SIZE = 512
 NUM_EPOCHS = 80
 MODEL_CONF = dict(
     num_embeddings=NUM_TOKENS,
-    embedding_dim=32,
+    embedding_dim=64,
     residual_block_def={
-        'input_features': 32,
-        'block_features': 64,
-        'kernel_size': (3,),
-        'dilation': 2,
+        'input_features': 64,
+        'block_features': 128,
+        'kernel_size': (9,),
+        'dilation': 3,
         'padding': 'same'
     },
     n_residual_blocks=4,
@@ -46,17 +48,6 @@ MODEL_CONF = dict(
 )
 MODEL_EVAL_CONF = MODEL_CONF.copy()
 MODEL_EVAL_CONF['residual_block_def']['use_running_avg'] = True
-
-wandb.init(
-    job_type='training',
-    config={'model': MODEL_CONF,
-            'epochs': NUM_EPOCHS,
-            'batch_size': BATCH_SIZE,
-            'lr': LEARNING_RATE,
-            'sequence_length': SEQUENCE_LENGTH},
-    project=WANDB_PROJECT_NAME,
-    group='jax.ResNet',
-)
 
 
 def get_datasets() -> dict:
@@ -113,7 +104,15 @@ def train_step(state: train_state.TrainState, batch_stats: dict, batch: Dict[str
         logits_, batch_stats_ = ResNet(**MODEL_CONF).apply({'params': params, **batch_stats},
                                                            batch[SOURCE_COLUMN],
                                                            mutable=['batch_stats'])
-        loss = cross_entropy_loss(logits=logits_, labels=batch[TARGET_COLUMN])
+
+        def l2_norm(i, w):
+            z = i + jnp.sum(w ** 2)
+            return z
+
+        loss = (
+                cross_entropy_loss(logits=logits_, labels=batch[TARGET_COLUMN])
+                + WEIGHT_DECAY * jax.tree_util.tree_reduce(l2_norm, params, initializer=0)
+        )
         return loss, (logits_, batch_stats_)
 
     grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
@@ -239,6 +238,17 @@ class ResNet(nn.Module):
 
 
 def main():
+    wandb.init(
+        job_type='training',
+        config={'model': MODEL_CONF,
+                'epochs': NUM_EPOCHS,
+                'batch_size': BATCH_SIZE,
+                'lr': LEARNING_RATE,
+                'sequence_length': SEQUENCE_LENGTH},
+        project=WANDB_PROJECT_NAME,
+        group='jax.ResNet',
+        entity=WANDB_ENTITY
+    )
     model = ResNet(**MODEL_CONF)
     batch = jnp.ones((BATCH_SIZE, SEQUENCE_LENGTH))
     rng = jax.random.PRNGKey(0)
