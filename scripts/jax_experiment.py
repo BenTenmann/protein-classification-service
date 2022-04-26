@@ -1,7 +1,7 @@
 import os
 from itertools import product
 from pathlib import Path
-from typing import Sequence, Dict
+from typing import Sequence, Dict, Union
 
 import flax.linen as nn
 import jax
@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 DATA_DIR = os.environ.get('DATA_DIR')
 MODEL_DIR = os.environ.get('MODEL_DIR')
+RESUME_FROM = os.environ.get('RESUME_FROM')
 WANDB_PROJECT_NAME = os.environ.get('WANDB_PROJECT_NAME', 'protein-classification-development')
 
 DATA_FILES = ['source.npy', 'target.npy']
@@ -31,10 +32,10 @@ BATCH_SIZE = 512
 NUM_EPOCHS = 80
 MODEL_CONF = dict(
     num_embeddings=NUM_TOKENS,
-    embedding_dim=64,
+    embedding_dim=32,
     residual_block_def={
-        'input_features': 64,
-        'block_features': 128,
+        'input_features': 32,
+        'block_features': 64,
         'kernel_size': (3,),
         'dilation': 2,
         'padding': 'same'
@@ -93,6 +94,16 @@ def get_batch_indices(rng: jnp.ndarray, dataset_size: int, batch_size: int) -> j
     perms = perms[:steps_per_epoch * batch_size]  # skip incomplete batch
     perms = perms.reshape((steps_per_epoch, batch_size))
     return perms
+
+
+def load_checkpoint(path: Union[str, Path], target) -> tuple:
+    if isinstance(path, str):
+        path = Path(path)
+    byte_str = path.read_bytes()
+    variables = serialization.from_bytes(target, byte_str)
+    params = variables['params']
+    variables.pop('params')
+    return params, variables
 
 
 @jax.jit
@@ -231,13 +242,16 @@ def main():
     batch = jnp.ones((BATCH_SIZE, SEQUENCE_LENGTH))
     rng = jax.random.PRNGKey(0)
     rng, init_rng = jax.random.split(rng)
-    params = model.init(init_rng, batch)['params']
+    variables = model.init(init_rng, batch)
+    params = variables['params']
+    batch_stats = {}
+    if RESUME_FROM:
+        params, batch_stats = load_checkpoint(RESUME_FROM, variables)
 
     tx = optax.adam(learning_rate=LEARNING_RATE)
     train_state_ = train_state.TrainState.create(apply_fn=model.apply, params=params, tx=tx)
 
     datasets = get_datasets()
-    batch_stats = {}
     model_dir = Path(MODEL_DIR)
     if not model_dir.exists():
         raise FileNotFoundError(f'{model_dir} does not exist')
