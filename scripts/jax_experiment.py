@@ -31,7 +31,7 @@ BATCH_SIZE = 512
 NUM_EPOCHS = 80
 MODEL_CONF = dict(
     num_embeddings=NUM_TOKENS,
-    embedding_dim=32,
+    embedding_dim=64,
     residual_block_def={
         'input_features': 64,
         'block_features': 128,
@@ -128,7 +128,7 @@ def train_epoch(state: train_state.TrainState,
         wandb.log({'training': metrics})
         batch_metrics.append(metrics)
         src = jax.device_get(class_labels)
-        tgt = jax.device_get(batch[TARGET_COLUMN][perm, ...])
+        tgt = jax.device_get(batch[TARGET_COLUMN])
         predictions.append(src)
         targets.append(tgt)
     predictions = np.concatenate(predictions)
