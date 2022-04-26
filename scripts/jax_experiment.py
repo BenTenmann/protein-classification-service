@@ -1,4 +1,5 @@
 import os
+import re
 from itertools import product
 from pathlib import Path
 from typing import Sequence, Dict, Union
@@ -247,6 +248,10 @@ def main():
     batch_stats = {}
     if RESUME_FROM:
         params, batch_stats = load_checkpoint(RESUME_FROM, variables)
+        eps = re.findall(r"epcoh-([0-9]+)\.flx", RESUME_FROM)[0]
+        prev_epoch = int(eps)
+    else:
+        prev_epoch = 0
 
     tx = optax.adam(learning_rate=LEARNING_RATE)
     train_state_ = train_state.TrainState.create(apply_fn=model.apply, params=params, tx=tx)
@@ -255,7 +260,7 @@ def main():
     model_dir = Path(MODEL_DIR)
     if not model_dir.exists():
         raise FileNotFoundError(f'{model_dir} does not exist')
-    for epoch in range(1, NUM_EPOCHS + 1):
+    for epoch in range(1 + prev_epoch, NUM_EPOCHS + 1):
         print(f'epoch: {epoch}/{NUM_EPOCHS}')
         # Use a separate PRNG key to permute image data during shuffling
         rng, input_rng = jax.random.split(rng)
