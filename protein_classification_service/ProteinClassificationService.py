@@ -59,6 +59,29 @@ class Response(BaseModel):
     prediction: Sequence[Prediction]
 
 
+# ----- Helpers ------------------------------------------------------------------------------------------------------ #
+def ensure_sequence_integrity(predict_method):
+    def is_correctly_formatted(sequence: str) -> bool:
+        # ensure that the sequence conforms to expected format
+        correctly_formatted = (
+                sequence.isupper() and sequence.isalpha()
+        )
+        return correctly_formatted
+
+    @wraps(predict_method)
+    def guarded_predict_method(self, msg: Payload):
+        payload = dict(msg)
+        incorrectly_formatted = [(pos, sequence) for pos, sequence in enumerate(payload['sequence'])
+                                 if not is_correctly_formatted(sequence)]
+        if incorrectly_formatted:
+            message = '\n'.join(f'  at [{pos}]: {repr(seq)}' for pos, seq in incorrectly_formatted)
+            raise ValueError(f'invalid sequences supplied to service:\n{message}')
+        response = predict_method(self, msg)
+        return response
+
+    return guarded_predict_method
+
+
 # ----- Service------------------------------------------------------------------------------------------------------- #
 class ProteinClassificationService:
     _tokenizer_args: dict = {
@@ -87,6 +110,7 @@ class ProteinClassificationService:
         return out
 
     @catch_and_log_errors
+    @ensure_sequence_integrity
     def predict_raw(self, msg: Payload) -> Response:
         payload = dict(msg)
         token_tensors = torch.stack([self._tokenize(sequence) for sequence in payload['sequence']])
