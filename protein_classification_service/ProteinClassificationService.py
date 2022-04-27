@@ -2,6 +2,7 @@ import logging
 import os
 import traceback
 from functools import wraps
+from typing import Sequence
 
 import srsly
 import torch
@@ -44,14 +45,41 @@ def catch_and_log_errors(fn):
 
 # ----- Typing ------------------------------------------------------------------------------------------------------- #
 class Payload(BaseModel):
-    sequence: str = Field(..., example={'sequence': 'EIKKMISEIDKDGSGTIDFEEFLTMMTA'})
+    sequence: Sequence[str] = Field(..., example={'sequence': ['EIKKMISEIDKDGSGTIDFEEFLTMMTA']})
 
 
-class ProteinFamily(BaseModel):
+class Prediction(BaseModel):
     family_id: str
     family_accession: str
     family_description: str
     score: float
+
+
+class Response(BaseModel):
+    prediction: Sequence[Prediction]
+
+
+# ----- Helpers ------------------------------------------------------------------------------------------------------ #
+def ensure_sequence_integrity(predict_method):
+    def is_correctly_formatted(sequence: str) -> bool:
+        # ensure that the sequence conforms to expected format
+        correctly_formatted = (
+                sequence.isupper() and sequence.isalpha()
+        )
+        return correctly_formatted
+
+    @wraps(predict_method)
+    def guarded_predict_method(self, msg: Payload):
+        payload = dict(msg)
+        incorrectly_formatted = [(pos, sequence) for pos, sequence in enumerate(payload['sequence'])
+                                 if not is_correctly_formatted(sequence)]
+        if incorrectly_formatted:
+            message = '\n'.join(f'  at [{pos}]: {repr(seq)}' for pos, seq in incorrectly_formatted)
+            raise ValueError(f'invalid sequences supplied to service:\n{message}')
+        response = predict_method(self, msg)
+        return response
+
+    return guarded_predict_method
 
 
 # ----- Service------------------------------------------------------------------------------------------------------- #
@@ -70,7 +98,6 @@ class ProteinClassificationService:
     def _tokenize(self, sequence: str) -> torch.Tensor:
         tok = self.tokenizer(sequence, **self._tokenizer_args)
         out = torch.tensor(tok, dtype=torch.float32, device=DEVICE)
-        out = out.unsqueeze(0)
         return out
 
     def _prediction_to_output(self, prediction: torch.Tensor) -> dict:
@@ -79,16 +106,18 @@ class ProteinClassificationService:
 
         out = self.logit_map[predicted_class]
         logits = torch.softmax(prediction, dim=-1)
-        out['score'] = float(logits[0, int(predicted_class)])
+        out['score'] = float(torch.amax(logits, dim=-1).item())
         return out
 
     @catch_and_log_errors
-    def predict_raw(self, msg: Payload) -> ProteinFamily:
+    @ensure_sequence_integrity
+    def predict_raw(self, msg: Payload) -> Response:
         payload = dict(msg)
-        tok = self._tokenize(payload['sequence'])
-        prediction = self.model(tok)
-        out = self._prediction_to_output(prediction)
-        return out
+        token_tensors = torch.stack([self._tokenize(sequence) for sequence in payload['sequence']])
+        prediction = self.model(token_tensors)
+        formatted_output = map(self._prediction_to_output, prediction)
+        response = dict(prediction=list(formatted_output))
+        return response
 
     @staticmethod
     def _load_tokenizer() -> Tokenizer:
