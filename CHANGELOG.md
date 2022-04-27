@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.4.3...deploy-1.5.0) (2022-04-27)
+
+
+### Features
+
+* **svc:** add input format guard ([31d6211](https://github.com/BenTenmann/protein-classification-service/commit/31d6211264d990ff5ca5f5a9d7325392bf6e29e3))
+
 ## [1.4.3](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.4.2...deploy-1.4.3) (2022-04-11)
 
 
