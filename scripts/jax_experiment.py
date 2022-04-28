@@ -191,6 +191,30 @@ def eval_model(params, batch_stats: dict, test_ds: Dict[str, jnp.ndarray], batch
 
 
 class ResidualBlock(nn.Module):
+    """
+    Flax implementation of a residual block from the ResNet architecture [1]. Uses ReLU activation, batch norm and a
+    dilated convolution.
+
+    References
+    ----------
+    [1] He, K., Zhang, X., Ren, S. and Sun, J., 2016. Deep residual learning for image recognition. In Proceedings of
+        the IEEE conference on computer vision and pattern recognition (pp. 770-778).
+
+    Attributes
+    ----------
+    input_features: int
+        The number of incoming channels for the (dilated) convolution layer.
+    block_features: int
+        The number channels internal to the block i.e. the ones passed into the second (bottleneck) convolution layer.
+        Generally, `input_features < block_features`.
+    kernel_size: Sequence[int]
+        A sequence of integers defining the kernel size for both convolution layers.
+    dilation: int
+        The size of the kernel dilation of the first convolution layer. If dilation is 1, then there is no dilation.
+    use_running_avg: bool
+        Define whether batch norm layers should use the running average. Set to `True` for model evaluation.
+        Default=False
+    """
     input_features: int
     block_features: int
     kernel_size: Sequence[int]
@@ -219,6 +243,30 @@ class ResidualBlock(nn.Module):
 
 
 class ResNet(nn.Module):
+    """
+    Flax implementation of the ResNet architecture [1]. Embeds integer sequences of shape :math:`(N, L)`, followed by a
+    number of residual blocks, max pooling along the sequence dimension, linear projection and log-softmax
+    normalization.
+
+    References
+    ----------
+    [1] He, K., Zhang, X., Ren, S. and Sun, J., 2016. Deep residual learning for image recognition. In Proceedings of
+        the IEEE conference on computer vision and pattern recognition (pp. 770-778).
+
+    Attributes
+    ----------
+    num_embeddings: int
+        Number of input classes to be one-hot encoded.
+    embedding_dim: int
+        Dimension the one-hot class labels will be projected into. Must match with the input features on the residual
+        block.
+    residual_block_def: dict
+        Definition of residual block. See `ResidualBlock`.
+    n_residual_blocks: int
+        Number of residual blocks.
+    num_labels: int
+        The number of output classes.
+    """
     num_embeddings: int
     embedding_dim: int
     residual_block_def: dict
