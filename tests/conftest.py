@@ -25,8 +25,6 @@ def mock_jnp_load(monkeypatch, rng, array_shape):
 
 @pytest.fixture
 def mock_jnp_load_2(monkeypatch, rng):
-    import jax
-
     def jnp_load(file_path: str) -> jax.numpy.ndarray:
         shape, n_classes = ((128, 256), 25) if 'source' in file_path else ((128, 1), 17_929)
         mock_array = jax.random.randint(rng, shape, 0, n_classes)
