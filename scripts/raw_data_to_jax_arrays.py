@@ -1,3 +1,22 @@
+"""
+This script takes the jsonl formatted pfam seed random data splits and saves them as a set of jax numpy arrays in a
+nested subdir structure (one dir per split). The script requires a number of environment variables.
+
+Parameters
+----------
+LABEL_MAP: Path
+    Filepath to the label map, which is a JSON file containing a key for each string label, with a integer index as a
+    value. It will be used to map the string labels to their numeric index representations.
+TOKEN_MAP: Path
+    Filepath to the token map, which is a JSON file containing a key for each amino acid and a corresponding integer
+    index value. The integer index needs to start at 1, as 0 is reserved as the pad token. The token map will be used
+    to tokenize the protein sequences into integer vectors.
+DATA_DIR: Path
+    The directory containing the train, dev and test JSONL files.
+OUTPUT_DIR: Path
+    The directory into which the output will be stored.
+"""
+
 import logging
 import os
 from collections import defaultdict
@@ -7,7 +26,36 @@ from typing import Sequence
 import jax.numpy as jnp
 import numpy as np
 import pandas as pd
-import srsly
+try:
+    # in true `explosion` fashion, `srsly` can break easily with new updates; so we guard against that. However, srsly
+    # is still faster than the methods below
+    from srsly import read_json, read_jsonl
+except (ModuleNotFoundError, ImportError):
+    import json
+    from functools import wraps
+
+    logging.warning('`srsly` import failed. Using slow JSON read methods.')
+
+    def ensure_path(fn):
+        @wraps(fn)
+        def _type_safe(filename: str or Path):
+            if isinstance(filename, str):
+                filename = Path(filename)
+            out = fn(filename)
+            return out
+        return _type_safe
+
+    @ensure_path
+    def read_json(filename: Path) -> dict:
+        txt = filename.read_text()
+        obj = json.loads(txt)
+        return obj
+
+    @ensure_path
+    def read_jsonl(filename: Path):
+        for line in filename.open(mode='r'):
+            obj = json.loads(line)
+            yield obj
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -33,8 +81,8 @@ PAD_CHAR = '_'
 
 
 def main():
-    label_map = srsly.read_json(LABEL_MAP)
-    token_map = srsly.read_json(TOKEN_MAP)
+    label_map = read_json(LABEL_MAP)
+    token_map = read_json(TOKEN_MAP)
     token_map.setdefault(PAD_CHAR, PAD_TOKEN)
     token_map = defaultdict(lambda: PAD_TOKEN, token_map)
 
@@ -49,7 +97,7 @@ def main():
         return tokenized
 
     def process_dataset(path: str or Path) -> tuple:
-        lines = srsly.read_jsonl(path)
+        lines = read_jsonl(path)
         df = pd.DataFrame(lines)
         normalized_sequences = map(normalize_sequence, df[SOURCE_COLUMN])
         tokenized_sequences = map(tokenize_sequence, normalized_sequences)
