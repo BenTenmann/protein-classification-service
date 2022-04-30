@@ -46,22 +46,25 @@ def categorical_loss(loss_fn):
 
 @categorical_loss
 def cross_entropy_loss(*, logits: jnp.ndarray, labels: jnp.ndarray):
-    # logits are softmax normalized
-    loss = -jnp.mean(jnp.sum(labels * jnp.log(logits), axis=-1))
+    # logits are not normalized
+    normalized_logits = nn.log_softmax(logits)
+    loss = -jnp.mean(jnp.sum(labels * normalized_logits, axis=-1))
     return loss
 
 
 @categorical_loss
 def focal_loss(*, logits: jnp.ndarray, labels: jnp.ndarray, alpha: float = 1.0, gamma: float = 2.0):
-    # logits are softmax normalized
-    weight = (1 - logits) ** gamma
-    focal = -alpha * weight * jnp.log(logits)
+    # logits are not normalized
+    sft = nn.softmax(logits)
+    log_sft = nn.log_softmax(logits)
+    weight = (1 - sft) ** gamma
+    focal = -alpha * weight * log_sft
     loss = jnp.mean(jnp.sum(labels * focal, axis=-1))
     return loss
 
 
 def compute_metrics(*, logits, labels):
-    loss = cross_entropy_loss(logits=logits, labels=labels)
+    loss = focal_loss(logits=logits, labels=labels)
     accuracy = jnp.mean(jnp.argmax(logits, -1) == labels)
     metrics = {
         'loss': loss,
@@ -81,9 +84,8 @@ def train_step(state: train_state.TrainState, batch_stats: dict, batch: Dict[str
             z = i + jnp.sum(w ** 2)
             return z
 
-        normalized_logits = nn.softmax(logits_)
         loss = (
-                focal_loss(logits=normalized_logits, labels=batch[TARGET_COLUMN])
+                focal_loss(logits=logits_, labels=batch[TARGET_COLUMN])
                 + WEIGHT_DECAY * jax.tree_util.tree_reduce(l2_norm, params, initializer=0)
         )
         return loss, (logits_, batch_stats_)
@@ -139,7 +141,7 @@ def train_epoch(state: train_state.TrainState,
 @jax.jit
 def eval_step(params, batch_stats, batch):
     logits = ResNet(**MODEL_EVAL_CONF).apply({'params': params, **batch_stats}, batch[SOURCE_COLUMN])
-    loss = cross_entropy_loss(logits=logits, labels=batch[TARGET_COLUMN])
+    loss = focal_loss(logits=logits, labels=batch[TARGET_COLUMN])
     class_labels = jnp.argmax(logits, -1)
     return loss, class_labels
 
