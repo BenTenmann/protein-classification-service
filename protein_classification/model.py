@@ -64,8 +64,7 @@ class ResidualBlock(nn.Module):
 class ResNet(nn.Module):
     """
     Flax implementation of the ResNet architecture [1]. Embeds integer sequences of shape :math:`(N, L)`, followed by a
-    number of residual blocks, max pooling along the sequence dimension, linear projection and log-softmax
-    normalization.
+    number of residual blocks, max pooling along the sequence dimension and linear projection.
 
     References
     ----------
@@ -100,5 +99,4 @@ class ResNet(nn.Module):
             x = ResidualBlock(**self.residual_block_def)(x)
         x = jnp.max(x, axis=1)
         x = nn.Dense(features=self.num_labels)(x)
-        x = nn.log_softmax(x)
         return x

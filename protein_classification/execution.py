@@ -1,5 +1,8 @@
+import inspect
+from functools import wraps
 from typing import Dict
 
+import flax.linen as nn
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -25,9 +28,36 @@ __all__ = [
 ]
 
 
-def cross_entropy_loss(*, logits, labels):
-    one_hot_labels = jax.nn.one_hot(labels, num_classes=NUM_CLASSES)
-    return -jnp.mean(jnp.sum(one_hot_labels * logits, axis=-1))
+def categorical_loss(loss_fn):
+    # wraps loss function to cast class indices to one hot encodings
+    _loss_fn_signature = {'logits', 'labels'}
+    _fn_signature = inspect.signature(loss_fn)
+
+    if _loss_fn_signature.difference(_fn_signature.parameters):
+        raise ValueError(f'{loss_fn.__name__} does not have required `logits` and `labels` parameters')
+
+    @wraps(loss_fn)
+    def _loss_fn(*, logits: jnp.ndarray, labels: jnp.ndarray, **kwargs):
+        one_hot = jax.nn.one_hot(labels, num_classes=NUM_CLASSES)
+        loss = loss_fn(logits=logits, labels=one_hot, **kwargs)
+        return loss
+    return _loss_fn
+
+
+@categorical_loss
+def cross_entropy_loss(*, logits: jnp.ndarray, labels: jnp.ndarray):
+    # logits are softmax normalized
+    loss = -jnp.mean(jnp.sum(labels * jnp.log(logits), axis=-1))
+    return loss
+
+
+@categorical_loss
+def focal_loss(*, logits: jnp.ndarray, labels: jnp.ndarray, alpha: float = 1.0, gamma: float = 2.0):
+    # logits are softmax normalized
+    weight = (1 - logits) ** gamma
+    focal = -alpha * weight * jnp.log(logits)
+    loss = jnp.mean(jnp.sum(labels * focal, axis=-1))
+    return loss
 
 
 def compute_metrics(*, logits, labels):
@@ -51,8 +81,9 @@ def train_step(state: train_state.TrainState, batch_stats: dict, batch: Dict[str
             z = i + jnp.sum(w ** 2)
             return z
 
+        normalized_logits = nn.softmax(logits_)
         loss = (
-                cross_entropy_loss(logits=logits_, labels=batch[TARGET_COLUMN])
+                focal_loss(logits=normalized_logits, labels=batch[TARGET_COLUMN])
                 + WEIGHT_DECAY * jax.tree_util.tree_reduce(l2_norm, params, initializer=0)
         )
         return loss, (logits_, batch_stats_)
