@@ -22,7 +22,7 @@ __all__ = [
 
 def get_datasets(data_dir: Union[str, Path]) -> dict:
     if isinstance(data_dir, str):
-        data_dir = Path()
+        data_dir = Path(data_dir)
     datasets = {split: {} for split in DATA_SPLITS}
     for split, filename in product(DATA_SPLITS, DATA_FILES):
         file_path = data_dir / split / filename
