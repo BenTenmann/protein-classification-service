@@ -18,6 +18,8 @@ from .constants import (
     SOURCE_COLUMN,
     TARGET_COLUMN,
     WEIGHT_DECAY,
+    ALPHA,
+    GAMMA
 )
 from .model import ResNet
 from .utils import get_batch_indices
@@ -53,12 +55,12 @@ def cross_entropy_loss(*, logits: jnp.ndarray, labels: jnp.ndarray):
 
 
 @categorical_loss
-def focal_loss(*, logits: jnp.ndarray, labels: jnp.ndarray, alpha: float = 1.0, gamma: float = 2.0):
+def focal_loss(*, logits: jnp.ndarray, labels: jnp.ndarray):
     # logits are not normalized
     sft = nn.softmax(logits)
     log_sft = nn.log_softmax(logits)
-    weight = (1 - sft) ** gamma
-    focal = -alpha * weight * log_sft
+    weight = (1 - sft) ** GAMMA
+    focal = -ALPHA * weight * log_sft
     loss = jnp.mean(jnp.sum(labels * focal, axis=-1))
     return loss
 
