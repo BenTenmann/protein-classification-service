@@ -12,10 +12,27 @@ in their sequence similarity, i.e. their conservation in primary structure (amin
 
 ## Running the training
 
-To run the model training, run the following:
+To run the model training, you will first have to download the preprocessed data and install the relevant requirements:
 
 ```bash
-WANDB_API_KEY=$YOUR_WANDB_API_KEY ./run-protein-classification-training.sh
+# download and untar preprocessed data
+FILENAME=pfam-seed-random-split.tar.gz
+gsutil cp gs://`basename $PWD`/$FILENAME data/ && \
+  tar -xvf data/$FILENAME -C data/
+  
+# install the relevant requirements
+pip install -r requirements${COLAB_GPU:+'-colab'}.txt
+```
+
+Once the data is downloaded and the requirements are installed, the training scripts can be run like so:
+
+```bash
+mkdir ${MODEL_DIR:=models}
+
+DATA_DIR=data/${FILENAME%.tar.gz} \
+  MODEL_DIR=$MODEL_DIR \
+  WANDB_API_KEY=$YOUR_WANDB_API_KEY \
+  python -m protein_classification
 ```
 
 ## Running the tests
