@@ -4,9 +4,9 @@ image:
   tag: 1.5.0
 modelWeights:
   registry: gs://protein-classification-service/
-  name: model
+  name: model.flx
 serviceDependencies:
-  configName: mlp
-  logitName: 1k-fam
-  tokenName: kidera-factors
+  configName: resnet
+  logitName: logit_map
+  tokenName: token_map
   modelDir: weights

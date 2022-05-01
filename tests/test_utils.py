@@ -1,18 +1,15 @@
 import pytest
 
 from protein_classification import utils
-from protein_classification.dataset import Tokenizer
+from protein_classification.tokenize import Tokenizer
 
 
 @pytest.fixture
-def tokenizer():
-    def _method():
-        return Tokenizer({'A': 1, 'S': 2, 'Q': 3})
-    return _method
-
-
-def test_set_seed():
-    utils.set_seed()
+def mock_read_json(monkeypatch):
+    monkeypatch.setattr(
+        'protein_classification.utils.srsly.read_json',
+        lambda *args, **kwargs: {'A': 1, 'S': 2, 'Q': 3}
+    )
 
 
 def test_load_tokenizer(mock_read_json):
