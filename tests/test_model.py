@@ -42,12 +42,6 @@ class Cases:
     ]
 
 
-@pytest.fixture
-def rng():
-    init_rng = jax.random.PRNGKey(0)
-    return init_rng
-
-
 @pytest.mark.parametrize(['test_case', 'target'], Cases.RESNET)
 class TestResNet:
     def test_base(self, test_case, target, rng):

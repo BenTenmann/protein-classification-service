@@ -2,17 +2,14 @@ import logging
 import os
 import traceback
 from functools import wraps
-from typing import Callable, Sequence
+from typing import Sequence
 
 import flax.linen as nn
-import jax
 import jax.numpy as jnp
 import srsly
-from flax import serialization
 from pydantic import BaseModel, Field
 
-from protein_classification.model import ResNet
-from protein_classification.utils import load_tokenizer
+from protein_classification.utils import load_tokenizer, load_model
 
 # ----- Logging Setup ------------------------------------------------------------------------------------------------ #
 logging.basicConfig(
@@ -85,26 +82,6 @@ def ensure_sequence_integrity(predict_method):
     return guarded_predict_method
 
 
-def load_model(sequence_length: int) -> Callable:
-    def load_params(variables):
-        with open(MODEL_WEIGHTS, 'rb') as file:
-            byte_str = file.read()
-            params_ = serialization.from_bytes(variables, byte_str)
-        return params_
-
-    conf = srsly.read_yaml(CONFIG_MAP)
-    model = ResNet(**conf)
-    batch = jnp.ones((1, sequence_length))
-    init_rng = jax.random.PRNGKey(0)
-    var = model.init(init_rng, batch)
-    params = load_params(var)
-
-    def predict_fn(x: jnp.ndarray) -> jnp.ndarray:
-        y_hat = model.apply(params, x)
-        return y_hat
-    return predict_fn
-
-
 # ----- Service------------------------------------------------------------------------------------------------------- #
 class ProteinClassificationService:
     tokenizer_args: dict = {
@@ -146,5 +123,5 @@ class ProteinClassificationService:
     def load(self):
         logging.info(f'Loading service dependencies (pid {os.getpid()})')
         self.logit_map = srsly.read_json(LOGIT_MAP)
-        self.model = load_model(self.tokenizer_args['max_length'])
+        self.model = load_model(MODEL_WEIGHTS, CONFIG_MAP, self.tokenizer_args['max_length'])
         self.tokenizer = load_tokenizer(TOKEN_MAP)
