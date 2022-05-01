@@ -1,29 +1,14 @@
-import random
 from pathlib import Path
 
 import srsly
-import torch
 
-from .dataset import (
+from .tokenize import (
     Tokenizer
 )
 
 __all__ = [
-    'load_tokenizer',
-    'set_seed',
+    'load_tokenizer'
 ]
-
-
-def set_seed() -> None:
-    """
-    Set the seed of the system.
-
-    Returns
-    -------
-    None
-    """
-    random.seed(42)
-    torch.manual_seed(42)
 
 
 def load_tokenizer(path: Path or str) -> Tokenizer:

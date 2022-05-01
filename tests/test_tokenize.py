@@ -1,6 +1,6 @@
 import pytest
 
-from protein_classification import dataset
+from protein_classification import tokenize
 
 
 class Cases:
@@ -13,7 +13,7 @@ class Cases:
 
 @pytest.mark.parametrize(['sequence', 'token_map', 'max_length', 'target'], Cases.TOKENIZER)
 def test_tokenizer(sequence, token_map, max_length, target):
-    tokenizer = dataset.Tokenizer(token_map)
+    tokenizer = tokenize.Tokenizer(token_map)
 
     result = tokenizer(sequence, padding='max_length', truncation=True, max_length=max_length)
     assert result == target

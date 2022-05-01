@@ -1,8 +1,11 @@
-pandas==1.4.1
 scikit_learn==1.0.2
-srsly==2.4.2
-torch==1.10.2
 tqdm==4.62.3
 pydantic==1.9.0
 seldon-core==1.13.1
 werkzeug==2.0.3
+flax==0.4.1
+jax==0.3.7
+jaxlib==0.3.7
+numpy==1.22.3
+optax==0.1.2
+srsly==2.4.2

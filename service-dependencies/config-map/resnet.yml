@@ -1,0 +1,11 @@
+num_embeddings: 25
+embedding_dim: 64
+residual_block_def:
+  input_features: 64
+  block_features: 128
+  kernel_size: [9]
+  dilation: 3
+  padding: same
+  use_running_avg: true
+n_residual_blocks: 4
+num_labels: 17929

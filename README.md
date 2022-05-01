@@ -26,7 +26,7 @@ kubectl port-forward svc/`basename $PWD` ${PORT:=7687} &
 
 curl -X POST localhost:${PORT}/api/v1.0/predictions \
      -H 'Content-Type: application/json' \
-     -d '{"sequence": "EIKKMISEIDKDGSGTIDFEEFLTMMTA"}'
+     -d '{"sequence": ["EIKKMISEIDKDGSGTIDFEEFLTMMTA"]}'
 ```
 
 ## Running the tests
