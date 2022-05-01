@@ -61,7 +61,7 @@ spec:
               echo weights pulled
           env:
             - name: MODEL_WEIGHTS
-              value: {{ .Values.modelWeights.registry }}{{ .Values.modelWeights.name }}.tar.gz
+              value: {{ .Values.modelWeights.registry }}{{ .Values.modelWeights.name }}.flx.tar.gz
             - name: MODEL_WEIGHTS_DIR
               value: {{ .Values.serviceDependencies.modelDir }}
           volumeMounts:

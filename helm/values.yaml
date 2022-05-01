@@ -4,7 +4,7 @@ image:
   tag: 1.6.0
 modelWeights:
   registry: gs://protein-classification-service/
-  name: model.flx
+  name: model
 serviceDependencies:
   configName: resnet
   logitName: logit_map
