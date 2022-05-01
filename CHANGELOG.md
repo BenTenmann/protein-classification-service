@@ -1,3 +1,10 @@
+## [1.6.2](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.6.1...deploy-1.6.2) (2022-05-01)
+
+
+### Bug Fixes
+
+* payload schema update ([cefc928](https://github.com/BenTenmann/protein-classification-service/commit/cefc928cc2c19bc84f07f61a4b537299630c7979))
+
 ## [1.6.1](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.6.0...deploy-1.6.1) (2022-05-01)
 
 
