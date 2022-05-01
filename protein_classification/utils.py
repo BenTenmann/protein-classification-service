@@ -1,121 +1,54 @@
-import os
-import random
-from datetime import datetime
+from itertools import product
 from pathlib import Path
+from typing import Union
 
-import numpy as np
-import pandas as pd
-import srsly
-import torch
-from torch.utils.data import DataLoader
+import jax
+import jax.numpy as jnp
+from flax import serialization
 
-from .dataset import (
-    ProteinFamilyDataset,
-    Tokenizer
+from .constants import (
+    DATA_FILES,
+    DATA_SPLITS,
+    SOURCE_COLUMN,
+    TARGET_COLUMN
 )
 
 __all__ = [
-    'load_dataloader',
-    'load_tokenizer',
-    'now',
-    'set_seed',
+    'get_datasets',
+    'get_batch_indices',
+    'load_checkpoint'
 ]
 
 
-def set_seed(seed: int = 42) -> None:
-    """
-    Set the seed of the system.
-
-    Returns
-    -------
-    None
-    """
-    random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-
-
-def seed_worker(worker_id):
-    worker_seed = torch.initial_seed() % 2 ** 32
-    random.seed(worker_seed)
-    np.random.seed(worker_seed)
+def get_datasets(data_dir: Union[str, Path]) -> dict:
+    if isinstance(data_dir, str):
+        data_dir = Path(data_dir)
+    datasets = {split: {} for split in DATA_SPLITS}
+    for split, filename in product(DATA_SPLITS, DATA_FILES):
+        file_path = data_dir / split / filename
+        data_array = jnp.load(str(file_path))
+        column = {
+            'source': SOURCE_COLUMN,
+            'target': TARGET_COLUMN
+        }[file_path.stem]
+        datasets[split][column] = data_array
+    return datasets
 
 
-def load_dataloader(path: Path or str,
-                    tokenizer: Tokenizer,
-                    label_map: dict,
-                    batch_size: int,
-                    **tokenizer_args) -> DataLoader:
-    """
-    Load a dataloader object using data from a specified file.
+def get_batch_indices(rng: jnp.ndarray, dataset_size: int, batch_size: int) -> jnp.ndarray:
+    steps_per_epoch = dataset_size // batch_size
 
-    Parameters
-    ----------
-    path: Path or str
-        Path specifying input data in `.jsonl` format.
-    tokenizer: Tokenizer
-        The tokenizer used by the ProteinFamilyDataset object.
-    label_map: Dict[str, int]
-        The label map used  by the ProteinFamilyDataset object.
-    batch_size: int
-        The loader batch size/
-    tokenizer_args: Any
-        Keyword arguments passed to the tokenizer on call.
-
-    Returns
-    -------
-    loader: DataLoader
-        The initialised DataLoader object.
-
-    Examples
-    --------
-    >>> tokenizer = load_tokenizer('path/to/token-map.json')
-    >>> label_map = srsly.read_json('path/to/label-map.json')
-    >>> dataloader = load_dataloader('path/to/train.jsonl', tokenizer, label_map, batch_size=10, max_length=512)
-    """
-    lines = srsly.read_jsonl(path)
-    data_frame = pd.DataFrame(lines)
-    generator = torch.Generator()
-    generator.manual_seed(42)
-
-    dataset = ProteinFamilyDataset(data_frame, tokenizer, label_map, **tokenizer_args)
-    loader = DataLoader(dataset,
-                        batch_size=batch_size,
-                        shuffle=True,
-                        worker_init_fn=seed_worker,
-                        generator=generator)
-    return loader
+    perms = jax.random.permutation(rng, dataset_size)
+    perms = perms[:steps_per_epoch * batch_size]  # skip incomplete batch
+    perms = perms.reshape((steps_per_epoch, batch_size))
+    return perms
 
 
-def load_tokenizer(path: Path or str) -> Tokenizer:
-    """
-    Load a Tokenizer object by specifying a target token map.
-
-    Parameters
-    ----------
-    path: Path or str
-        Path specifying the target token map in `.json` format.
-
-    Returns
-    -------
-    out: Tokenizer
-        The initialised Tokenizer object.
-    """
-    token_map = srsly.read_json(path)
-    out = Tokenizer(token_map)
-    return out
-
-
-def now() -> str:
-    """
-    Convenience wrapper for getting the current datetime in the `%Y-%m-%d-%X` format.
-
-    Returns
-    -------
-    out: str
-        The current datetime in the `%Y-%m-%d-%X` format.
-    """
-    out = datetime.now().strftime('%Y-%m-%d-%X')
-    return out
+def load_checkpoint(path: Union[str, Path], target) -> tuple:
+    if isinstance(path, str):
+        path = Path(path)
+    byte_str = path.read_bytes()
+    variables = serialization.from_bytes(target, byte_str)
+    params = variables['params']
+    variables.pop('params')
+    return params, variables

@@ -1,129 +1,154 @@
-from functools import partial
-from typing import Callable, Optional
+import inspect
+from functools import wraps
+from typing import Dict
 
-import torch
+import flax.linen as nn
+import jax
+import jax.numpy as jnp
+import numpy as np
 import wandb
+from flax.training import train_state
 from sklearn.metrics import classification_report
-from torch import nn
-from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from .constants import (
+    NUM_CLASSES,
+    MODEL_CONF,
+    MODEL_EVAL_CONF,
+    SOURCE_COLUMN,
+    TARGET_COLUMN,
+    WEIGHT_DECAY,
+)
+from .model import ResNet
+from .utils import get_batch_indices
+
 __all__ = [
-    'OptimizerStep',
-    'LRSchedulerStep',
-    'training',
-    'testing',
-    'validation'
+    'train_epoch',
+    'eval_model'
 ]
 
 
-class OptimizerStep:
-    """
-    Thin wrapper around a `torch.optim.Optimizer` object. Handles optimizer logic and is useful for writing a generic
-    model execution loop (see below).
+def categorical_loss(loss_fn):
+    # wraps loss function to cast class indices to one hot encodings
+    _loss_fn_signature = {'logits', 'labels'}
+    _fn_signature = inspect.signature(loss_fn)
 
-    Attributes
-    ----------
-    optim: torch.optim.Optimizer
-        The optimizer object.
+    if _loss_fn_signature.difference(_fn_signature.parameters):
+        raise ValueError(f'{loss_fn.__name__} does not have required `logits` and `labels` parameters')
 
-    Examples
-    --------
-    The model training use case:
-    >>> model = nn.Linear(10, 1)
-    >>> optim = torch.optim.Adam(model.parameters(), lr=1e-3)
-    >>> optimizer = OptimizerStep(optim)
-    >>> loss_fn = nn.BCELoss()
-    >>> X = torch.randn(64, 10)
-    >>> y = (torch.randn(64, 1) >= 0.).float()
-    >>> y_hat = model(X)
-    >>> loss = loss_fn(y_hat, y)
-    >>> optimizer(loss)  # does update step
-    """
-
-    def __init__(self, optimizer: torch.optim.Optimizer):
-        self.optim = optimizer
-
-    def __call__(self, loss: torch.Tensor) -> None:
-        if loss is None:
-            return None
-        self.optim.zero_grad()
-        loss.backward()
-        self.optim.step()
+    @wraps(loss_fn)
+    def _loss_fn(*, logits: jnp.ndarray, labels: jnp.ndarray, **kwargs):
+        one_hot = jax.nn.one_hot(labels, num_classes=NUM_CLASSES)
+        loss = loss_fn(logits=logits, labels=one_hot, **kwargs)
+        return loss
+    return _loss_fn
 
 
-class LRSchedulerStep:
-    def __init__(self, lr_scheduler):
-        if not (hasattr(lr_scheduler, 'step') and callable(lr_scheduler.step)):
-            raise TypeError(f'{lr_scheduler.__class__.__name__} does not have a `step` method')
-        self.lr_scheduler = lr_scheduler
-
-    def __call__(self):
-        self.lr_scheduler.step()
+@categorical_loss
+def cross_entropy_loss(*, logits: jnp.ndarray, labels: jnp.ndarray):
+    # logits are not normalized
+    normalized_logits = nn.log_softmax(logits)
+    loss = -jnp.mean(jnp.sum(labels * normalized_logits, axis=-1))
+    return loss
 
 
-def _loop(model: nn.Module,
-          dataset: DataLoader,
-          loss_fn: Optional[Callable] = lambda *_: None,
-          optimizer: Optional[Callable] = lambda _: None,
-          lr_scheduler: Optional[Callable] = lambda: None,
-          step_per_batch: bool = True,
-          status: str = 'training'):
-    """
-    Generic model execution loop. Iterates over a dataloader and creates predictions from a model. Under certain
-    parameters it computes a loss and performs update steps.
+def compute_metrics(*, logits, labels):
+    loss = cross_entropy_loss(logits=logits, labels=labels)
+    accuracy = jnp.mean(jnp.argmax(logits, -1) == labels)
+    metrics = {
+        'loss': loss,
+        'accuracy': accuracy,
+    }
+    return metrics
 
-    Parameters
-    ----------
-    model: nn.Module
-        The model used for generating predictions.
-    dataset: DataLoader
-        The dataloader object, providing the batched inputs and targets in a (X, y) tuple of tensors.
-    loss_fn: Optional[Callable]
-        A callable taking a number of positional arguments and returning either a `torch.Tensor` or `None`. The inputs
-        to the callable are, in order, the model predictions and the model targets. If unset, the callable returns
-        `None`, i.e. no loss is computed.
-    optimizer: Optional[Callable]
-        A callable taking a single positional argument and returning `None`. The argument to `optimizer` is the output
-        of `loss_fn`. If unset, the callable returns `None` and no optimizer step is performed.
-    status: str
-        The execution status identifier. Usually one of: 'training', 'testing', 'validation'. Used by logger to group
-        metrics.
 
-    Returns
-    -------
-    model: nn.Module
-        The input model.
+@jax.jit
+def train_step(state: train_state.TrainState, batch_stats: dict, batch: Dict[str, jnp.ndarray]) -> tuple:
+    def loss_fn(params):
+        logits_, batch_stats_ = ResNet(**MODEL_CONF).apply({'params': params, **batch_stats},
+                                                           batch[SOURCE_COLUMN],
+                                                           mutable=['batch_stats'])
 
-    Examples
-    --------
-    >>> import protein_classification.utils as utils
-    >>> dataloader = utils.load_dataloader('path/to/file.jsonl', ...)
-    >>> model = _loop(model, dataloader, loss_fn, optimizer, status='training')
-    """
-    predictions = []
-    targets = []
-    for (X, y) in tqdm(dataset, desc=status, unit='batch'):
-        y_hat = model(X)
-        loss = loss_fn(y_hat, y)
+        def l2_norm(i, w):
+            z = i + jnp.sum(w ** 2)
+            return z
 
-        optimizer(loss)
-        if loss:
-            wandb.log({status: {'loss': loss.item()}})
-        prd = torch.softmax(y_hat, dim=-1).argmax(dim=-1)
+        loss = (
+                cross_entropy_loss(logits=logits_, labels=batch[TARGET_COLUMN])
+                + WEIGHT_DECAY * jax.tree_util.tree_reduce(l2_norm, params, initializer=0)
+        )
+        return loss, (logits_, batch_stats_)
 
-        predictions.extend(prd.tolist())
-        targets.extend(y.tolist())
-        if step_per_batch:
-            lr_scheduler()
-    if not step_per_batch:
-        lr_scheduler()
+    grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
+    (_, (logits, batch_stats)), grads = grad_fn(state.params)
+    state = state.apply_gradients(grads=grads)
+    metrics = compute_metrics(logits=logits, labels=batch[TARGET_COLUMN])
+    class_labels = jnp.argmax(logits, -1)
+    return state, batch_stats, metrics, class_labels
+
+
+def train_epoch(state: train_state.TrainState,
+                batch_stats: dict,
+                train_ds: Dict[str, jnp.ndarray],
+                batch_size: int,
+                epoch: int,
+                rng: jnp.ndarray) -> tuple:
+    train_ds_size = len(train_ds[SOURCE_COLUMN])
+    perms = get_batch_indices(rng, train_ds_size, batch_size)
+    batch_metrics = []
+    predictions, targets = [], []
+    for perm in tqdm(perms):
+        batch = {k: v[perm, ...] for k, v in train_ds.items()}
+        state, batch_stats, metrics, class_labels = train_step(state, batch_stats, batch)
+        wandb.log({'training': metrics})
+        batch_metrics.append(metrics)
+        src = jax.device_get(class_labels)
+        tgt = jax.device_get(batch[TARGET_COLUMN])
+        predictions.append(src)
+        targets.append(tgt)
+    predictions = np.concatenate(predictions)
+    targets = np.concatenate(targets)
+    report = {
+        key: val for key, val in classification_report(targets, predictions, output_dict=True).items()
+        if key in {'macro avg', 'weighted avg', 'accuracy'}
+    }
+    wandb.log({'train': report})
+
+    # compute mean of metrics across each batch in epoch.
+    batch_metrics_np = jax.device_get(batch_metrics)
+    epoch_metrics_np = {
+        k: np.mean([metrics[k] for metrics in batch_metrics_np])
+        for k in ['loss', 'accuracy']
+    }
+
+    print('train epoch: %d, loss: %.4f, accuracy: %.2f' % (
+        epoch, epoch_metrics_np['loss'], epoch_metrics_np['accuracy'] * 100))
+
+    return state, batch_stats
+
+
+@jax.jit
+def eval_step(params, batch_stats, batch):
+    logits = ResNet(**MODEL_EVAL_CONF).apply({'params': params, **batch_stats}, batch[SOURCE_COLUMN])
+    loss = cross_entropy_loss(logits=logits, labels=batch[TARGET_COLUMN])
+    class_labels = jnp.argmax(logits, -1)
+    return loss, class_labels
+
+
+def eval_model(params, batch_stats: dict, test_ds: Dict[str, jnp.ndarray], batch_size: int, rng: jnp.ndarray):
+    test_ds_size = len(test_ds[SOURCE_COLUMN])
+    perms = get_batch_indices(rng, test_ds_size, batch_size)
+    predictions, targets = [], []
+    total_loss = 0
+    for perm in tqdm(perms):
+        batch = {k: v[perm, ...] for k, v in test_ds.items()}
+        loss, class_labels = eval_step(params, batch_stats, batch)
+        src = jax.device_get(class_labels)
+        tgt = jax.device_get(batch[TARGET_COLUMN])
+        predictions.append(src)
+        targets.append(tgt)
+        total_loss += jax.device_get(loss).item()
+    predictions = np.concatenate(predictions)
+    targets = np.concatenate(targets)
     report = classification_report(targets, predictions, output_dict=True)
-    wandb.log({status: {k: report[k] for k in ('macro avg', 'weighted avg', 'accuracy')}})
-    return model
-
-
-# partial functions wrapping the generic loop for convenience
-training = partial(_loop, status='training')
-validation = torch.no_grad()(partial(_loop, status='validation'))
-testing = torch.no_grad()(partial(_loop, status='testing'))
+    return {**report, 'loss': total_loss / len(perms)}

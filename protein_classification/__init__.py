@@ -12,35 +12,13 @@ variables need to be set.
 
 Parameters
 ----------
-CONFIG_MAP: str
-    Path to training config map (`.yml`). The config map defines model parameters, number of epochs, learning rate etc. See
-    `${REPO}/manifest` for examples.
-TRAIN_DATA: str
-    Path to `.jsonl` file containing the training examples.
-DEV_DATA: str
-    Path to `.jsonl` file containing the development (validation) examples.
-TEST_DATA: str
-    Path to `.jsonl` file containing the testing examples.
-LABEL_MAP: str
-    Path to label map (`.json`). The label map is a mapping from class label (e.g. `family_accession`) to numeric index.
-LABEL_WEIGHTS: Optional[str]
-    Path to label weights (`.json`). A json object with a single property (`weights`), where the property is an array of
-    floats of length == number of labels. The order is significant, where the label map index and the position in the
-    array need to correspond for any given label. The weights are then used in the loss to re-weigh the terms.
-TOKEN_MAP: str
-    Path to token map (`.json`). The token map is a mapping from sequence token (e.g. amino acid letters) to numeric
-    representation. This can either be a single integer (i.e. index) or an n-length array.
-SAVE_PATH: str
-    Path to save directory.
-SOURCE_COLUMN: Optional[str]
-    Column name of the model inputs (default `sequence`).
-TARGET_COLUMN: Optional[str]
-    Column name of the model targets / labels (default `family_accession`).
-SOURCE_TYPE: Optional[str]
-    The tensor type for the model input; one of: `FLOAT`, `LONG`. (default "FLOAT")
-TARGET_TYPE: Optional[str]
-    The tensor type for the model targets; one of: `FLOAT`, `LONG`. (default `LONG`)
-WANDB_PROJECT: str
+DATA_DIR: str
+    Path to data directory.
+MODEL_DIR: str
+    Path to directory for saving the model weights.
+RESUME_FROM: Optional[str]
+    An optional path to model weights from which to resume the model training.
+WANDB_PROJECT_NAME: str
     The wandb project identifier for experiment tracking.
 WANDB_ENTITY: str
     The wandb entity to use for experiment tracking.

@@ -1,125 +1,100 @@
 import re
-from os import environ
 from pathlib import Path
 
-import torch
-import srsly
+import jax
+import jax.numpy as jnp
+import optax
 import wandb
-from torch import nn
-from transformers import AutoTokenizer
+from flax import serialization
+from flax.training import train_state
 
-from . import model as mdl
-from .constants import DEVICE
-from .execution import (
-    OptimizerStep,
-    LRSchedulerStep,
-    training,
-    testing,
-    validation
+from .constants import (
+    DATA_DIR,
+    MODEL_CONF,
+    NUM_EPOCHS,
+    BATCH_SIZE,
+    LEARNING_RATE,
+    SEQUENCE_LENGTH,
+    WANDB_PROJECT_NAME,
+    WANDB_ENTITY,
+    RESUME_FROM,
+    MODEL_DIR
 )
-from .utils import (
-    load_dataloader,
-    load_tokenizer,
-    now,
-    set_seed
-)
+from .execution import train_epoch, eval_model
+from .model import ResNet
+from .utils import load_checkpoint, get_datasets
 
 
-def main(config: dict = None) -> Path:
-    """
-    Entrypoint for model training and benchmarking script, accessed via the command line. Refer to `__init__.py` for
-    variable definitions.
-    """
-    set_seed()
-    if config is None:
-        path = environ['CONFIG_MAP']
-        config_path = Path(path)
-        config = srsly.read_yaml(config_path)
-
-    model_conf = config.get('model', {})
-    model_param = model_conf.get('param', {})
-    # gets the model object we want; gives us more flexibility training different models
-    model = getattr(mdl, model_conf.get('name'))(**model_param)
-    model.to(DEVICE)
-
-    label_map_path = environ['LABEL_MAP']
-    label_map = srsly.read_json(label_map_path)
-
-    token_map_path = environ.get('TOKEN_MAP')
-    if token_map_path:
-        tokenizer = load_tokenizer(token_map_path)
-    else:
-        if 'tokenizer' not in config:
-            raise ValueError('tokenizer left undefined')
-        identifier = config['tokenizer']['identifier']
-        tokenizer = AutoTokenizer.from_pretrained(identifier)
-
-    env = config.get('env', {})
-    loader_map = {'tokenizer': tokenizer,
-                  'label_map': label_map,
-                  'batch_size': env.get('batch_size'),
-                  'max_length': model_param.get('seq_len', 256)}
-
-    train_loader = load_dataloader(environ.get('TRAIN_DATA'), **loader_map)
-    dev_loader = load_dataloader(environ.get('DEV_DATA'), **loader_map)
-    test_loader = load_dataloader(environ.get('TEST_DATA'), **loader_map)
-
-    if 'LABEL_WEIGHTS' in environ:
-        lw = srsly.read_json(environ.get('LABEL_WEIGHTS'))
-        weights = torch.tensor(lw.get('weights'), dtype=torch.float32, device=DEVICE)
-        loss_fn = nn.CrossEntropyLoss(weights)
-    else:
-        loss_fn = nn.CrossEntropyLoss()
-
-    resume_from = environ.get('RESUME_FROM')
-    if resume_from:
-        prev_epochs = re.findall(r"epoch-([0-9]+)\.bin", resume_from)[0]
-        prev_epochs = int(prev_epochs)
-        state_dict = torch.load(resume_from, map_location=DEVICE)
-        model.load_state_dict(state_dict)
-    else:
-        prev_epochs = 0
-
-    optim_param = config.get('optim', {'lr': 1e-3})
-    optim = torch.optim.Adam(model.parameters(), **optim_param)
-    optimizer = OptimizerStep(optim)
-
-    lr_scheduler_param = config.get('lr_scheduler')
-    if lr_scheduler_param is None:
-        scheduler = type('StaticLR', (object,), {'step': lambda *args, **kwargs: None})
-    else:
-        scheduler = torch.optim.lr_scheduler.CyclicLR(optim, **lr_scheduler_param)
-    lr_scheduler_step = LRSchedulerStep(scheduler)
-    step_per_batch = config.get('step_per_batch', True)
-
-    wandb.login(key=environ.get('WANDB_API_KEY'))
+def main():
+    """Entrypoint for ResNet training. See `__init__.py` for variable definitions."""
     wandb.init(
-        entity=environ.get('WANDB_ENTITY'),
-        project=environ.get('WANDB_PROJECT'),
-        config={
-            'model_config': config,
-            'data_config': {'train': environ['TRAIN_DATA'],
-                            'dev': environ['DEV_DATA'],
-                            'test': environ['TEST_DATA']}
-        },
+        job_type='training',
+        config={'model': MODEL_CONF,
+                'epochs': NUM_EPOCHS,
+                'batch_size': BATCH_SIZE,
+                'lr': LEARNING_RATE,
+                'sequence_length': SEQUENCE_LENGTH},
+        project=WANDB_PROJECT_NAME,
+        group='jax.ResNet',
+        entity=WANDB_ENTITY
     )
+    model = ResNet(**MODEL_CONF)
+    batch = jnp.ones((BATCH_SIZE, SEQUENCE_LENGTH))
+    rng = jax.random.PRNGKey(0)
+    rng, init_rng = jax.random.split(rng)
+    variables = model.init(init_rng, batch)
+    params = variables['params']
+    batch_stats = {}
+    if RESUME_FROM:
+        params, batch_stats = load_checkpoint(RESUME_FROM, variables)
+        eps = re.findall(r"epoch-([0-9]+)\.flx", RESUME_FROM)[0]
+        prev_epoch = int(eps)
+    else:
+        prev_epoch = 0
 
-    model_dir = Path(environ.get('SAVE_PATH')) / f'{model_conf.get("name")}-{now()}'
-    model_dir.mkdir(parents=True, exist_ok=True)
+    tx = optax.adam(learning_rate=LEARNING_RATE)
+    train_state_ = train_state.TrainState.create(apply_fn=model.apply, params=params, tx=tx)
 
-    epochs = env.get('epochs')
-    for eps in range(1 + prev_epochs, epochs + 1):
-        print(f'epoch: {eps}/{epochs}')
-        model.train()
-        model = training(model, train_loader, loss_fn, optimizer, lr_scheduler_step, step_per_batch)
-        model.eval()
-        model = validation(model, dev_loader, loss_fn)
+    datasets = get_datasets(DATA_DIR)
+    model_dir = Path(MODEL_DIR)
+    if not model_dir.exists():
+        raise FileNotFoundError(f'{model_dir} does not exist')
+    for epoch in range(1 + prev_epoch, NUM_EPOCHS + 1):
+        print(f'epoch: {epoch}/{NUM_EPOCHS}')
+        # Use a separate PRNG key to permute image data during shuffling
+        rng, input_rng = jax.random.split(rng)
+        # Run an optimization step over a training batch
+        train_state_, batch_stats = train_epoch(
+            state=train_state_,
+            train_ds=datasets['train'],
+            batch_stats=batch_stats,
+            batch_size=BATCH_SIZE,
+            epoch=epoch,
+            rng=input_rng
+        )
+        # Evaluate on the test set after each training epoch
+        rng, input_rng = jax.random.split(rng)
+        report = eval_model(params=train_state_.params,
+                            batch_stats=batch_stats,
+                            test_ds=datasets['dev'],
+                            batch_size=BATCH_SIZE,
+                            rng=input_rng)
+        wandb.log({'dev': {key: report[key] for key in ('macro avg', 'weighted avg', 'accuracy', 'loss')}})
+        print('dev epoch: %d, loss: %.2f, accuracy: %.2f' % (
+            epoch, report['loss'], report['accuracy'] * 100))
+        with (model_dir / f'epoch-{epoch}.flx').open(mode='wb') as file:
+            byte_str = serialization.to_bytes({'params': train_state_.params, **batch_stats})
+            file.write(byte_str)
 
-        output_path = model_dir / f'epoch-{eps}.bin'
-        torch.save(model.state_dict(), output_path)
-
-    testing(model, test_loader)
-    return model_dir
+    _, input_rng = jax.random.split(rng)
+    report = eval_model(params=train_state_.params,
+                        batch_stats=batch_stats,
+                        test_ds=datasets['test'],
+                        batch_size=BATCH_SIZE,
+                        rng=input_rng)
+    wandb.log({'test': {key: report[key] for key in ('macro avg', 'weighted avg', 'accuracy', 'loss')}})
+    print('test results: loss: %.2f, accuracy: %.2f' % (
+        report['loss'], report['accuracy'] * 100))
 
 
 if __name__ == '__main__':

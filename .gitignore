@@ -12,3 +12,6 @@ venv/
 download.sh
 benjamin-tenmann.bundle
 notes/
+models/
+manifest/
+depr/
