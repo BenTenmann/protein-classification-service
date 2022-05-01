@@ -42,8 +42,3 @@ To run the unit tests, create a local Python3.9 environment and run the followin
 pip install -r requirements-dev.txt
 python3 -m pytest -v tests --cov=protein_classification
 ```
-
-
-## Reading the report
-
-A link to the pre-compiled HTML report detailing the experiments can be found in `${PWD}/notebooks/README.md`.
