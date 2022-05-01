@@ -27,7 +27,7 @@ pip install -r requirements${COLAB_GPU:+'-colab'}.txt
 Once the data is downloaded and the requirements are installed, the training scripts can be run like so:
 
 ```bash
-mkdir ${MODEL_DIR:=models}
+mkdir -p ${MODEL_DIR:=models}
 
 DATA_DIR=data/${FILENAME%.tar.gz} \
   MODEL_DIR=$MODEL_DIR \
