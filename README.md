@@ -82,4 +82,4 @@ python3 -m pytest -v tests --cov=protein_classification
 1. Bileschi, M.L., Belanger, D., Bryant, D.H., Sanderson, T., Carter, B., Sculley, D., Bateman, A., DePristo, M.A. and
 Colwell, L.J., 2022. Using deep learning to annotate the protein universe. Nature Biotechnology, pp.1-6.
 2. Heek, J., Levskaya, A., Oliver, A., Ritter, M., Rondepierre, B., Steiner, A. and van Zee, M., Flax: A neural network
-library and ecosystem for JAX, 2020. URL http://github. com/google/flax, 1.
+library and ecosystem for JAX, 2020. URL http://github.com/google/flax, 1.
