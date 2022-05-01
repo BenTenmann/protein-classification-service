@@ -18,8 +18,6 @@ from .constants import (
     SOURCE_COLUMN,
     TARGET_COLUMN,
     WEIGHT_DECAY,
-    ALPHA,
-    GAMMA
 )
 from .model import ResNet
 from .utils import get_batch_indices
@@ -54,19 +52,8 @@ def cross_entropy_loss(*, logits: jnp.ndarray, labels: jnp.ndarray):
     return loss
 
 
-@categorical_loss
-def focal_loss(*, logits: jnp.ndarray, labels: jnp.ndarray):
-    # logits are not normalized
-    sft = nn.softmax(logits)
-    log_sft = nn.log_softmax(logits)
-    weight = (1 - sft) ** GAMMA
-    focal = -ALPHA * weight * log_sft
-    loss = jnp.mean(jnp.sum(labels * focal, axis=-1))
-    return loss
-
-
 def compute_metrics(*, logits, labels):
-    loss = focal_loss(logits=logits, labels=labels)
+    loss = cross_entropy_loss(logits=logits, labels=labels)
     accuracy = jnp.mean(jnp.argmax(logits, -1) == labels)
     metrics = {
         'loss': loss,
@@ -87,7 +74,7 @@ def train_step(state: train_state.TrainState, batch_stats: dict, batch: Dict[str
             return z
 
         loss = (
-                focal_loss(logits=logits_, labels=batch[TARGET_COLUMN])
+                cross_entropy_loss(logits=logits_, labels=batch[TARGET_COLUMN])
                 + WEIGHT_DECAY * jax.tree_util.tree_reduce(l2_norm, params, initializer=0)
         )
         return loss, (logits_, batch_stats_)
@@ -143,7 +130,7 @@ def train_epoch(state: train_state.TrainState,
 @jax.jit
 def eval_step(params, batch_stats, batch):
     logits = ResNet(**MODEL_EVAL_CONF).apply({'params': params, **batch_stats}, batch[SOURCE_COLUMN])
-    loss = focal_loss(logits=logits, labels=batch[TARGET_COLUMN])
+    loss = cross_entropy_loss(logits=logits, labels=batch[TARGET_COLUMN])
     class_labels = jnp.argmax(logits, -1)
     return loss, class_labels
 
