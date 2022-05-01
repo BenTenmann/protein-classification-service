@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.5.0...deploy-1.6.0) (2022-05-01)
+
+
+### Features
+
+* **flax:** change service model framework to flax ([39d332d](https://github.com/BenTenmann/protein-classification-service/commit/39d332d10b48ab5aa2312db7a9f399e3e4bdbc5c))
+
 # [1.5.0](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.4.3...deploy-1.5.0) (2022-04-27)
 
 
