@@ -50,9 +50,11 @@ class Payload(BaseModel):
 
 
 class Prediction(BaseModel):
+    clan_accession: str
+    clan_id: str
+    description: str
     family_id: str
     family_accession: str
-    family_description: str
     score: float
 
 
