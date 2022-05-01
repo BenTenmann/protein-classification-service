@@ -94,7 +94,7 @@ def load_model(sequence_length: int) -> Callable:
     model = ResNet(**conf)
     batch = jnp.ones((1, sequence_length))
     init_rng = jax.random.PRNGKey(0)
-    var = ResNet.init(init_rng, batch)
+    var = model.init(init_rng, batch)
     params = load_params(var)
 
     def predict_fn(x: jnp.ndarray) -> jnp.ndarray:
@@ -140,7 +140,9 @@ class ProteinClassificationService:
         response = dict(prediction=list(formatted_output))
         return response
 
+    @catch_and_log_errors
     def load(self):
+        logging.info(f'Loading service dependencies (pid {os.getpid()})')
         self.logit_map = srsly.read_json(LOGIT_MAP)
         self.model = load_model(self.tokenizer_args['max_length'])
         self.tokenizer = load_tokenizer(TOKEN_MAP)
