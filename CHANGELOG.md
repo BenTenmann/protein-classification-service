@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.6.0...deploy-1.6.1) (2022-05-01)
+
+
+### Bug Fixes
+
+* **seldon:** fix model load method ([a6f50f6](https://github.com/BenTenmann/protein-classification-service/commit/a6f50f68d2d49cb5df7e0c43041def30ccaed1a2))
+
 # [1.6.0](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.5.0...deploy-1.6.0) (2022-05-01)
 
 
