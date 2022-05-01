@@ -1,3 +1,10 @@
+## [1.6.3](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.6.2...deploy-1.6.3) (2022-05-01)
+
+
+### Bug Fixes
+
+* **refactor:** move load_model to utils ([687e738](https://github.com/BenTenmann/protein-classification-service/commit/687e738257cc96ddeee620b23a874356bd08ad73))
+
 ## [1.6.2](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.6.1...deploy-1.6.2) (2022-05-01)
 
 
