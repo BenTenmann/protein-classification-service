@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
 import jax
 import jax.numpy as jnp
@@ -36,7 +36,9 @@ def load_tokenizer(path: Path or str) -> Tokenizer:
     return out
 
 
-def load_model(params_path: str, config_map_path: str, sequence_length: int) -> Callable:
+def load_model(params_path: str,
+               config_map_path: str,
+               init_shape: tuple) -> Callable:
     """
     Load the ResNet model from a parameters file and a model manifest file. It is a convenience function wrapping model
     init and the model apply, such that the model can be used as a callable, much like PyTorch modules.
@@ -47,8 +49,8 @@ def load_model(params_path: str, config_map_path: str, sequence_length: int) -> 
         A path to a binary file containing the stored model weights and parameters.
     config_map_path: str
         Filepath to a YAML specifying the model hyperparameters.
-    sequence_length: int
-        The maximum sequence length for a model input sequence. Is used for initializing the Flax model.
+    init_shape: tuple
+        The shape of the init batch to initialize the model.
 
     Returns
     -------
@@ -64,7 +66,7 @@ def load_model(params_path: str, config_map_path: str, sequence_length: int) -> 
 
     conf = srsly.read_yaml(config_map_path)
     model = ResNet(**conf)
-    batch = jnp.ones((1, sequence_length))
+    batch = jnp.ones(init_shape)
     init_rng = jax.random.PRNGKey(0)
     var = model.init(init_rng, batch)
     params = load_params(var)
