@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Optional, Sequence
 
 import flax.linen as nn
 import jax
@@ -73,8 +73,6 @@ class ResNet(nn.Module):
 
     Attributes
     ----------
-    num_embeddings: int
-        Number of input classes to be one-hot encoded.
     embedding_dim: int
         Dimension the one-hot class labels will be projected into. Must match with the input features on the residual
         block.
@@ -84,16 +82,19 @@ class ResNet(nn.Module):
         Number of residual blocks.
     num_labels: int
         The number of output classes.
+    num_embeddings: Optional[int]
+        Number of input classes to be one-hot encoded.
     """
-    num_embeddings: int
     embedding_dim: int
     residual_block_def: dict
     n_residual_blocks: int
     num_labels: int
+    num_embeddings: Optional[int] = None
 
     @nn.compact
     def __call__(self, x):
-        x = jax.nn.one_hot(x, num_classes=self.num_embeddings)
+        if self.num_embeddings:
+            x = jax.nn.one_hot(x, num_classes=self.num_embeddings)
         x = nn.Dense(self.embedding_dim)(x)
         for _ in range(self.n_residual_blocks):
             x = ResidualBlock(**self.residual_block_def)(x)
