@@ -1,3 +1,10 @@
+## [1.6.4](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.6.3...deploy-1.6.4) (2022-05-02)
+
+
+### Bug Fixes
+
+* **model:** add outside ohe option ([1bd6f32](https://github.com/BenTenmann/protein-classification-service/commit/1bd6f32fa8cc6b3250c1f74b25c2b5db8496cb44))
+
 ## [1.6.3](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.6.2...deploy-1.6.3) (2022-05-01)
 
 
