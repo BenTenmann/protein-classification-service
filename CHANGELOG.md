@@ -1,3 +1,10 @@
+## [1.6.5](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.6.4...deploy-1.6.5) (2022-05-02)
+
+
+### Bug Fixes
+
+* **load_model:** change init batch shape param ([f58ff84](https://github.com/BenTenmann/protein-classification-service/commit/f58ff84bcdef48c111e7f54af2d3b7767f09e0b5))
+
 ## [1.6.4](https://github.com/BenTenmann/protein-classification-service/compare/deploy-1.6.3...deploy-1.6.4) (2022-05-02)
 
 
