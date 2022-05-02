@@ -79,11 +79,11 @@ def test_load_tokenizer(mock_read_json):
 
 class TestLoadModel:
     def test_load_model(self, mock_read_bytes, mock_from_bytes, mock_read_yaml):
-        model = utils.load_model('', '', 256)
+        model = utils.load_model('', '', (1, 256))
         assert callable(model)
 
     def test_model(self, mock_read_bytes, mock_from_bytes, mock_read_yaml, batch, model_conf):
-        model = utils.load_model('', '', 256)
+        model = utils.load_model('', '', (1, 256))
         y_hat = model(batch)
 
         (_, C) = None, model_conf()['num_labels']

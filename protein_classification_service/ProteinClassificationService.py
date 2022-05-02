@@ -123,5 +123,6 @@ class ProteinClassificationService:
     def load(self):
         logging.info(f'Loading service dependencies (pid {os.getpid()})')
         self.logit_map = srsly.read_json(LOGIT_MAP)
-        self.model = load_model(MODEL_WEIGHTS, CONFIG_MAP, self.tokenizer_args['max_length'])
+        init_shape = (1, self.tokenizer_args['max_length'])
+        self.model = load_model(MODEL_WEIGHTS, CONFIG_MAP, init_shape)
         self.tokenizer = load_tokenizer(TOKEN_MAP)
